@@ -32,9 +32,9 @@ Dates are read with pandas' format inference. For day-first dates such as `05-02
 
 To score your own model, pass a Python file that defines `forecast(train, h)`. `train` is a pandas Series with a DatetimeIndex and `h` is the number of periods to return. Add `--candidate my_model.py` to the command, and `--by-horizon` to see the error at each step ahead.
 
-For data with many series, name the columns that identify one with `--id`, for example `--id store item`. The script scores each series on its own and averages MASE with equal weight per series. It also prints in how many series the candidate beats the best baseline. Series that are too short or have no variation are skipped and counted. `--max-series 50` scores only the first 50 series in id order, which keeps a slow model like ETS manageable.
+For data with many series, name the columns that identify one with `--id`, for example `--id store item`. The script scores each series on its own and averages MASE with equal weight per series. It also prints in how many series the candidate beats the best baseline. Series that are too short, have no variation or have missing target values are skipped and counted, never filled. `--max-series 50` scores only the first 50 series in id order, which keeps a slow model like ETS manageable.
 
-The metric is MASE, the average error divided by the in-sample error of a seasonal naive forecast. Lower is better, and the number compares across series. MAE comes along in the original units. Run the tests with `python3 scripts/test_backtest.py`.
+The metric is MASE, the average error divided by the in-sample error of a seasonal naive forecast. Lower is better, and the number compares across series. MAE comes along in the original units. MASE is scaled by `--season`, so it cannot be compared between runs with different seasons, compare MAE there. With a long horizon or a yearly pattern, also run the longest natural season (364 for daily data, 52 for weekly) and check that naive's MAE is the same in both runs. Run the tests with `python3 scripts/test_backtest.py`.
 
 ## Example
 

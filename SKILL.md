@@ -63,7 +63,7 @@ def forecast(train, h):  # train is a pd.Series with a DatetimeIndex
 
 - Many series: `--id` scores each series on its own, then averages MASE with equal weight
   per series (no volume weighting) and counts the series where the candidate beats the best
-  baseline. Series that are too short or flat are skipped and counted in the output.
+  baseline. Series that are too short, flat or have missing values are skipped and counted in the output.
   `--max-series N` takes the first N series in id order, not a random sample.
 - Expanding training window only.
 - A training window with no variation makes MASE undefined. That series is skipped and
