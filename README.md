@@ -23,7 +23,7 @@ clone it into your skills folder:
 git clone https://github.com/collisionattack/forecast-backtest ~/.claude/skills/forecast-backtest
 ```
 
-you need python 3.10 or newer, pandas 2.0 or newer and numpy. the ets examples also need statsmodels. ci runs the oldest and the newest of these on linux and windows.
+you need python 3.10 or newer, pandas 2.0 or newer and numpy. the ets examples also need statsmodels, and the prophet example needs prophet. ci runs the oldest and the newest of these on linux and windows.
 
 ## use
 
@@ -38,6 +38,19 @@ python3 scripts/backtest.py data.csv --date date --target sales --horizon 28 --s
 to score your own model, pass a python file that defines `forecast(train, h)`. `train` is a pandas series with a datetime index and `h` is the number of periods to return. you get a copy of `train`, so editing it changes nothing outside your function. add `--candidate my_model.py` to the command, or several files to compare models in one table. for prediction intervals, also define `forecast_interval(train, h, level)` in the same file, returning `(lower, upper)` with `h` values each, and add `--level 80 95`.
 
 dates are read with pandas' format inference. for day-first dates such as `05-02-2010`, add `--date-format %d-%m-%Y`. without it the script stops with a message.
+
+## use cases
+
+each row is a situation, the flags that answer it and what to read in the output.
+
+| situation | what you run | what to read |
+| --- | --- | --- |
+| you built a model and want to know if it earns its complexity | `--candidate my_model.py` | the verdict line, which says whether it beats the best baseline. weekly holt-winters on store item demand looked fine against the weekly baseline and lost once last year's same days sat next to it |
+| you have several models and must pick one | `--candidate a.py b.py c.py` | one table on the same windows, and for each model the number of series where it beats the best baseline |
+| you forecast thousands of products or stores | `--id store item`, `--weight volume` | scores averaged over series, which series were skipped or flat, and how many series each model wins. a mean can hide a split, the win count shows it. volume weighting lets the big sellers count more |
+| a forecast range feeds a decision such as stock levels | `--level 80 95` | how often the actual values landed inside, and how wide the range was. on air passengers the 80% range held 95.8% of the points, wider than it needed to be |
+| you inherit a forecast and doubt it | ask claude to check it and point it at the csv | the skill makes claude check the data, score the baselines and backtest before it says anything about the model. fresh claude sessions given only a csv and the question found `--id`, `--date-format` and the 364-day baseline on their own |
+| your data has day-first dates or a yearly pattern in daily values | `--date-format %d-%m-%Y`, `--season 7 364` | the script stops on dates it cannot place instead of guessing, and the yearly baseline is scored next to the weekly one |
 
 ## example
 
@@ -109,6 +122,8 @@ level  coverage  width (MASE units)
 
 this holt-winters model has the yearly term (52 weeks) and beats the seasonal naive baseline in 37 of 45 stores. the weekly holt-winters on store item demand had no yearly term and lost to last year's same days.
 
+i also ran prophet (`examples/prophet_daily.py` is the daily version), an arima with the harmonic regressors, lightgbm, auto_arima and tbats through `--candidate` on the same data. on a 100-series store item sample prophet led from april to december (mae 6.239 against 6.465 for the harmonic regression) and trailed it from january to march (5.764 against 5.582). on walmart the damped holt-winters led (mase 0.710), prophet followed (0.790), and lightgbm did not beat the baseline (1.006). tbats takes 20 seconds per fit on weekly data and 46 on daily, so it ran on ten walmart stores only, where it reached 0.938 against 0.722 for holt-winters. the order moves with the window and the data, which is why `--candidate` takes several files.
+
 ## how it works
 
 <picture>
@@ -133,6 +148,7 @@ series with missing values or too little history are skipped and counted, never 
 | `scripts/test_backtest.py` | checks for the scoring code, run with `python3 scripts/test_backtest.py` | a wrong backtest gives false confidence, so the metrics, the windows and the bad-input paths are tested in ci |
 | `examples/ets_monthly.py` | a model file with `forecast` and `forecast_interval` | shows the interface your own model file follows |
 | `examples/ets_weekly.py` | the same for weekly data with a 52-week season | the model behind the walmart example |
+| `examples/prophet_daily.py` | a model file for daily data with prophet's trend and weekly and yearly seasonality, needs the prophet package and prints nothing from cmdstanpy | a second model family to run next to the harmonic regression with `--candidate`. it led on one window of store item demand and trailed on another |
 | `examples/yearly_harmonic.py` | a model file for daily data with a weekly and a yearly pattern, numpy and pandas only | the yearly term is what beat last year's same days on store item demand, and the file is a starting point for your own daily model |
 | `assets/` | the images used here, each in a dark and a light version, and the social preview card | github shows the version that matches the reader's theme. the chart is drawn from the runs described above |
 
