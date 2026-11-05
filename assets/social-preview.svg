@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="1280" height="640" fill="#0d1117"/>
+<text x="80" y="190" font-size="104" font-weight="700" fill="#f0f6fc">forecast-backtest</text>
+<text x="80" y="268" font-size="46" fill="#9198a1">score the baselines first, then your model.</text>
+<text x="80" y="326" font-size="28" fill="#6e7681">a claude skill that checks time-series models against simple baselines</text>
+<text x="80" y="408" font-size="22" fill="#6e7681">mean absolute error, store item demand, 90 days, lower is better</text>
+<text x="400" y="453" text-anchor="end" font-size="24" fill="#c9d1d9">last year's same days (364)</text><rect x="420" y="432" width="337.6" height="28" rx="4" fill="#3fb950"/><text x="771.6" y="454" font-size="24" font-weight="600" fill="#f0f6fc">8.88</text>
+<text x="400" y="499" text-anchor="end" font-size="24" fill="#c9d1d9">holt-winters, weekly</text><rect x="420" y="478" width="378.4" height="28" rx="4" fill="#58a6ff"/><text x="812.4" y="500" font-size="24" font-weight="600" fill="#f0f6fc">9.96</text>
+<text x="400" y="545" text-anchor="end" font-size="24" fill="#c9d1d9">seasonal naive (7)</text><rect x="420" y="524" width="445.1" height="28" rx="4" fill="#6e7681"/><text x="879.1" y="546" font-size="24" font-weight="600" fill="#f0f6fc">11.71</text>
+<text x="400" y="591" text-anchor="end" font-size="24" fill="#c9d1d9">naive</text><rect x="420" y="570" width="505.0" height="28" rx="4" fill="#6e7681"/><text x="939.0" y="592" font-size="24" font-weight="600" fill="#f0f6fc">13.29</text>
+</svg>

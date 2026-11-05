@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="330" viewBox="0 0 760 330" role="img" aria-labelledby="t d" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<title id="t">forecast error on store item demand</title>
+<desc id="d">mean absolute error over 90 days for four models: last year's same days 8.88, holt-winters 9.96, seasonal naive 11.71, naive 13.29. lower is better.</desc>
+<rect x="0.5" y="0.5" width="759" height="329" rx="10" fill="#f6f8fa" stroke="#d0d7de"/>
+<text x="28" y="40" font-size="18" font-weight="600" fill="#24292f">store item demand: forecast error over 90 days</text>
+<text x="28" y="62" font-size="13" fill="#57606a">mean absolute error across 500 daily series and 3 origins, lower is better</text>
+<text x="232" y="116" text-anchor="end" font-size="14" fill="#24292f">last year's same days (364)</text><rect x="246" y="96" width="302.1" height="28" rx="3" fill="#1a7f37"/><text x="558.1" y="116" font-size="14" font-weight="600" fill="#24292f">8.88</text>
+<text x="232" y="166" text-anchor="end" font-size="14" fill="#24292f">holt-winters, weekly</text><rect x="246" y="146" width="338.6" height="28" rx="3" fill="#0969da"/><text x="594.6" y="166" font-size="14" font-weight="600" fill="#24292f">9.96</text>
+<text x="232" y="216" text-anchor="end" font-size="14" fill="#24292f">seasonal naive (7)</text><rect x="246" y="196" width="398.2" height="28" rx="3" fill="#8c959f"/><text x="654.2" y="216" font-size="14" font-weight="600" fill="#24292f">11.71</text>
+<text x="232" y="266" text-anchor="end" font-size="14" fill="#24292f">naive</text><rect x="246" y="246" width="451.9" height="28" rx="3" fill="#8c959f"/><text x="707.9" y="266" font-size="14" font-weight="600" fill="#24292f">13.29</text>
+<text x="28" y="302" font-size="13" fill="#57606a">weekly holt-winters beats seasonal naive (7) in 478 of 500 series. its mean error is higher than last year's same days.</text>
+</svg>

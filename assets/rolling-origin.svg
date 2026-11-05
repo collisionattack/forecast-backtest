@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="284" viewBox="0 0 760 284" role="img" aria-labelledby="t d" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<title id="t">rolling-origin backtest</title>
+<desc id="d">three forecast origins. at each one the model trains on all earlier data and forecasts the next h steps, which are scored. later data is not used yet.</desc>
+<rect x="0.5" y="0.5" width="759" height="283" rx="10" fill="#f6f8fa" stroke="#d0d7de"/>
+<text x="28" y="40" font-size="18" font-weight="600" fill="#24292f">rolling-origin backtest</text>
+<text x="28" y="62" font-size="13" fill="#57606a">every model forecasts h steps ahead from each origin and is scored on the same windows</text>
+<text x="116" y="113" text-anchor="end" font-size="14" fill="#24292f">origin 1</text><rect x="130" y="94" width="330.0" height="28" rx="3" fill="#0969da"/><rect x="460.0" y="94" width="90.0" height="28" rx="3" fill="#fb8500"/>
+<rect x="550.0" y="94" width="180.0" height="28" rx="3" fill="#d0d7de"/>
+<text x="116" y="157" text-anchor="end" font-size="14" fill="#24292f">origin 2</text><rect x="130" y="138" width="420.0" height="28" rx="3" fill="#0969da"/><rect x="550.0" y="138" width="90.0" height="28" rx="3" fill="#fb8500"/>
+<rect x="640.0" y="138" width="90.0" height="28" rx="3" fill="#d0d7de"/>
+<text x="116" y="201" text-anchor="end" font-size="14" fill="#24292f">origin 3</text><rect x="130" y="182" width="510.0" height="28" rx="3" fill="#0969da"/><rect x="640.0" y="182" width="90.0" height="28" rx="3" fill="#fb8500"/>
+<line x1="130" y1="224" x2="730" y2="224" stroke="#8c959f" stroke-width="1.5"/>
+<polygon points="730,224 723,220 723,228" fill="#8c959f"/>
+<text x="730" y="218" text-anchor="end" font-size="12" fill="#57606a">time</text>
+<rect x="130" y="238" width="14" height="14" rx="2" fill="#0969da"/><text x="152" y="250" font-size="13" fill="#24292f">train on all earlier data</text><rect x="330" y="238" width="14" height="14" rx="2" fill="#fb8500"/><text x="352" y="250" font-size="13" fill="#24292f">forecast h steps, scored</text><rect x="530" y="238" width="14" height="14" rx="2" fill="#d0d7de"/><text x="552" y="250" font-size="13" fill="#24292f">later data, not used yet</text>
+</svg>
