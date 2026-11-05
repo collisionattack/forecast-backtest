@@ -20,20 +20,21 @@ Report that comparison even when it is bad news. Do not jump to a fancy model fi
    (lagged or as-of values only), and scalers/encoders are fit on the training window only.
 3. **Baselines first.** Run `scripts/backtest.py` with no candidate. It scores naive,
    seasonal naive and drift over several forecast origins. If the horizon is long or the
-   data repeats yearly, also run it with the longest natural season (364 for daily data,
-   52 for weekly) and compare MAE across the runs, because MASE is scaled by `--season`
-   and cannot be compared between different values. First check that naive's MAE is the
-   same in both runs: naive does not depend on `--season`, so a different value means the
-   longer season dropped origins or series and the runs scored different data. A candidate
-   that beats only the short-season baseline has not beaten the best baseline.
+   data repeats yearly, give every natural season in one run (`--season 7 364` for daily
+   data). Each value adds a seasonal naive, all are scored on the same origins, and MASE is
+   scaled by the first value. A longer season needs a longer history, so short series lose
+   origins (see the `origins:` line) or are skipped. A candidate that beats only the
+   short-season baseline has not beaten the best baseline.
 4. **Candidate.** Write `forecast(train, h)` in its own file, return `h` values, and run
    the script again with `--candidate`. Start simple (ETS/ARIMA, or a GBM on lag features)
    before anything heavier.
 5. **Read the verdict.** The script prints whether the candidate beats the best baseline.
    If it does not, say so and recommend the baseline. If only a few origins fit, small
    gaps are noise: raise `--origins` or shrink `--step`.
-6. **Uncertainty.** If the user needs ranges, produce prediction intervals and check their
-   empirical coverage on the same backtest. The script does not do this yet.
+6. **Uncertainty.** If the user needs ranges, add `forecast_interval(train, h, level)` to the
+   candidate file, returning `(lower, upper)`, and run with `--level 80 95`. The script prints
+   the share of test points inside each interval and the mean width. Coverage far below the
+   level means the ranges are too narrow, far above means too wide.
 7. **Report.** Table of MAE and MASE per model, number of origins (and series scored versus
    skipped), MASE by horizon step (`--by-horizon`), and the caveats (gaps, short history,
    structural breaks).
@@ -44,6 +45,11 @@ Report that comparison even when it is bad news. Do not jump to a fancy model fi
 python3 scripts/backtest.py data.csv --date date --target sales --horizon 28 --season 7 --origins 8
 python3 scripts/backtest.py data.csv --date date --target sales --horizon 28 --season 7 \
   --candidate my_model.py --by-horizon
+# long horizon: give the yearly season too, every baseline is scored on the same origins
+python3 scripts/backtest.py data.csv --date date --target sales --horizon 90 --season 7 364
+# interval coverage: my_model.py also defines forecast_interval(train, h, level), see examples/ets_monthly.py
+python3 scripts/backtest.py data.csv --date date --target sales --horizon 28 --season 7 \
+  --candidate my_model.py --level 80 95
 # many stores or items: name the columns that identify one series
 python3 scripts/backtest.py data.csv --date date --target sales --id store item \
   --horizon 28 --season 7 --max-series 50 --candidate my_model.py

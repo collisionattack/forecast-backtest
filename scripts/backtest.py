@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Rolling-origin backtest of baselines (and optionally one candidate) on one or many series.
 
-  backtest.py data.csv --date DATE --target Y --horizon 12 [--season 12] [--origins 5]
+  backtest.py data.csv --date DATE --target Y --horizon 12 [--season 12 [364 ...]] [--origins 5]
               [--step N] [--id COL [COL ...]] [--max-series N] [--date-format FMT]
-              [--candidate model.py] [--by-horizon]
+              [--candidate model.py [--level 80 95]] [--by-horizon]
 
-A candidate file defines forecast(train: pd.Series, h: int) -> array-like of h values.
-With --id, every series is scored on its own and the scores are averaged.
+A candidate file defines forecast(train: pd.Series, h: int) -> array-like of h values, and for --level also
+forecast_interval(train, h, level) -> (lower, upper). With --id, every series is scored on its own and the
+scores are averaged.
 
-shortcut: expanding window, no prediction-interval coverage check, equal weight per series.
-Upgrade when you need probabilistic evaluation or volume-weighted scores.
+shortcut: expanding window, equal weight per series. Upgrade when you need a rolling window or volume-weighted scores.
 """
 import argparse
 import importlib.util
@@ -60,12 +60,15 @@ def load(path, date, target, ids=None, date_format=None):
     return out
 
 
-def backtest(y, models, h, m, origins, step):
+def backtest(y, models, h, m, origins, step, longest=None, intervals=None, levels=(), cover=None):
     """models: {name: fn(train, h, m) -> h values}. Returns (summary, mase_by_horizon, n_origins).
+    m is the season that scales MASE. longest (default m) is the longest season scored and sets the shortest training
+    window, so every model sees the same origins. With intervals(train, h, level) -> (lower, upper), cover[level] gets
+    one (share of test points inside, mean width / scale) pair per origin.
     Raises ValueError when this series cannot be scored (missing values, too short, flat window, non-finite forecast)."""
     if y.isna().any():
         raise ValueError("target has missing values, decide how to handle them, they are never filled silently")
-    min_train = max(2 * m, 10)
+    min_train = max(2 * (longest or m), 10)
     cuts = sorted(c for c in (len(y) - h - k * step for k in range(origins)) if c >= min_train)
     if not cuts:
         raise ValueError(f"series too short: {len(y)} points, need at least {min_train + h}")
@@ -85,6 +88,11 @@ def backtest(y, models, h, m, origins, step):
             if not np.isfinite(f).all():
                 raise ValueError(f"{name} returned non-finite forecasts at row {c}")
             abs_err[name].append(np.abs(f - test))
+        for level in levels:
+            lo, hi = (np.asarray(v, dtype=float) for v in intervals(train, h, level))
+            if lo.shape != (h,) or hi.shape != (h,) or not (np.isfinite(lo).all() and np.isfinite(hi).all()) or (lo > hi).any():
+                raise ValueError(f"interval at level {level} must be two arrays of {h} finite values with lower <= upper, row {c}")
+            cover.setdefault(level, []).append((((lo <= test) & (test <= hi)).mean(), (hi - lo).mean() / scale))
     scales = np.array(scales)[:, None]
     abs_err = {name: np.array(v) for name, v in abs_err.items()}  # origins x h
     table = pd.DataFrame(
@@ -99,11 +107,22 @@ def beats(table, baselines):
     return table.loc["candidate", "MASE"] < table.loc[baselines, "MASE"].min()
 
 
-def load_candidate(path):
+def load_module(path):
     spec = importlib.util.spec_from_file_location("candidate", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
+    return mod
+
+
+def load_candidate(path):
+    mod = load_module(path)
     return lambda train, h, m: mod.forecast(train.copy(), h)  # train is a slice of the data, an in-place edit would change it
+
+
+def load_intervals(path):
+    """forecast_interval(train, h, level) -> (lower, upper) from the candidate file, or None when it has none."""
+    fn = getattr(load_module(path), "forecast_interval", None)
+    return fn and (lambda train, h, level: fn(train.copy(), h, level))
 
 
 def main(argv=None):
@@ -113,31 +132,50 @@ def main(argv=None):
     p.add_argument("--date-format", help="strptime format of the date column, for example %%d-%%m-%%Y")
     p.add_argument("--target", required=True, help="value column name")
     p.add_argument("--horizon", type=int, required=True, help="periods to forecast")
-    p.add_argument("--season", type=int, default=1, help="season length in periods (12 monthly, 7 daily)")
+    p.add_argument("--season", type=int, nargs="+", default=[1],
+                   help="season length(s) in periods (12 monthly, 7 daily, 364 daily with a yearly pattern). "
+                        "Each value adds a seasonal naive scored on the same origins. MASE is scaled by the first value")
     p.add_argument("--origins", type=int, default=5, help="number of rolling forecast origins")
     p.add_argument("--step", type=int, help="periods between origins (default: horizon)")
     p.add_argument("--id", nargs="+", help="column(s) that identify a series, scores are averaged over series")
     p.add_argument("--max-series", type=int, help="score only the first N series in id order, not a random sample")
     p.add_argument("--candidate", help="python file defining forecast(train, h)")
+    p.add_argument("--level", type=int, nargs="+",
+                   help="prediction interval levels in percent, for example 80 95. The candidate file must also "
+                        "define forecast_interval(train, h, level) -> (lower, upper)")
     p.add_argument("--by-horizon", action="store_true", help="also print MASE per horizon step")
     a = p.parse_args(argv)
-    if min(a.season, a.horizon, a.origins, a.max_series or 1, a.step or 1) < 1:
+    if min(*a.season, a.horizon, a.origins, a.max_series or 1, a.step or 1) < 1:
         p.error("--season, --horizon, --origins, --step and --max-series must be >= 1")
+    if a.level and not a.candidate:
+        p.error("--level needs --candidate")
+    if a.level and not all(0 < v < 100 for v in a.level):
+        p.error("--level values must be between 1 and 99")
 
     models = {"naive": naive, "drift": drift}
-    if a.season > 1:  # with season 1, seasonal naive is identical to naive
-        models["seasonal_naive"] = seasonal_naive
+    for k in a.season:
+        if k > 1:  # with season 1, seasonal naive is identical to naive
+            name = "seasonal_naive" if len(a.season) == 1 else f"seasonal_naive_{k}"
+            models[name] = lambda train, h, m, k=k: seasonal_naive(train, h, k)
     baselines = list(models)
+    intervals = None
     if a.candidate:
         models["candidate"] = load_candidate(a.candidate)
+        if a.level:
+            intervals = load_intervals(a.candidate)
+            if not intervals:
+                p.error(f"{a.candidate} does not define forecast_interval(train, h, level)")
 
     series = load(a.csv, a.date, a.target, a.id, a.date_format)
     if a.max_series:
         series = dict(list(series.items())[:a.max_series])
-    results, skipped = [], {}
+    results, skipped, covers = [], {}, []
     for label, y in series.items():
+        cov = {}
         try:
-            results.append(backtest(y, models, a.horizon, a.season, a.origins, a.step or a.horizon))
+            results.append(backtest(y, models, a.horizon, a.season[0], a.origins, a.step or a.horizon,
+                                    max(a.season), intervals, a.level or (), cov))
+            covers.append(cov)
         except ValueError as e:
             skipped[label] = str(e)
     if not results:
@@ -148,7 +186,7 @@ def main(argv=None):
     by_h = sum(by_hs) / len(by_hs)
 
     origins = str(min(ks)) if min(ks) == max(ks) else f"{min(ks)}-{max(ks)}"
-    print(f"origins: {origins}, horizon: {a.horizon}, season: {a.season}")
+    print(f"origins: {origins}, horizon: {a.horizon}, season: {' '.join(map(str, a.season))}")
     if a.id:
         print(f"series: {len(results)} scored, {len(skipped)} skipped, scores are averages over series")
     print("\n" + table.round(3).to_string())
@@ -166,6 +204,12 @@ def main(argv=None):
         if a.id:
             print(f"candidate beats the best baseline in {sum(beats(t, baselines) for t in tables)} "
                   f"of {len(tables)} series")
+    if a.level:
+        print(f"\nprediction intervals of the candidate, over {len(results)} series and {sum(ks)} origins")
+        print("level  coverage  width (MASE units)")
+        for v in a.level:
+            pairs = [q for c in covers for q in c[v]]
+            print(f"{v:>5}  {np.mean([q[0] for q in pairs]):>8.1%}  {np.mean([q[1] for q in pairs]):>18.2f}")
     if min(ks) < 5:
         print(f"note: only {min(ks)} origins, small gaps between models may be noise")
     return table

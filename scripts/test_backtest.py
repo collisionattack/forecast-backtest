@@ -1,6 +1,7 @@
 """Self-check for backtest.py. Run: python3 test_backtest.py (pytest also works)."""
 import contextlib
 import io
+import re
 import tempfile
 from pathlib import Path
 
@@ -209,6 +210,61 @@ def test_by_horizon_prints_one_row_per_step():
     _, out = run_cli(tmp / "m.csv", "--id", "id", "--by-horizon")
     rows = [line.split()[0] for line in out.split("MASE by horizon step")[1].splitlines() if line.split()]
     assert "1" in rows and "12" in rows, out
+
+
+def test_several_seasons_are_scored_on_the_same_windows():
+    tmp = Path(tempfile.mkdtemp())
+    t = np.arange(900)
+    y = 50 + 8 * np.sin(2 * np.pi * t / 7) + 5 * np.sin(2 * np.pi * t / 364) + np.random.default_rng(5).normal(0, 1, 900)
+    pd.DataFrame({"date": pd.date_range("2015-01-01", periods=900), "y": y}).to_csv(tmp / "d.csv", index=False)
+    args = ("--horizon", "90", "--origins", "3", "--step", "90")
+    short, _ = run_cli(tmp / "d.csv", *args, "--season", "7")
+    both, out = run_cli(tmp / "d.csv", *args, "--season", "7", "364")
+    long_only, _ = run_cli(tmp / "d.csv", *args, "--season", "364")
+    assert {"seasonal_naive_7", "seasonal_naive_364"} <= set(both.index)
+    assert "origins: 1," in out  # 364 needs 728 training days, only the last origin has them
+    assert not np.isclose(short.loc["naive", "MAE"], both.loc["naive", "MAE"])  # --season 7 alone scored 3 origins
+    assert np.isclose(long_only.loc["naive", "MAE"], both.loc["naive", "MAE"])  # naive does not depend on the season
+
+
+INTERVAL_CANDIDATE = (
+    "import numpy as np\n"
+    "def forecast(train, h):\n    return np.repeat(train.iloc[-1], h)\n"
+    "def forecast_interval(train, h, level):\n    return np.repeat(train.iloc[-1], h), np.repeat(train.iloc[-1] + {top}, h)\n"
+)
+
+
+def line_csv(tmp):
+    pd.DataFrame({"date": pd.date_range("2000-01-01", periods=100, freq="MS"), "y": np.arange(100.0)}).to_csv(tmp / "line.csv", index=False)
+
+
+def test_interval_coverage_counts_the_points_inside_and_the_width():
+    # straight line: naive misses by 1..4, so the band [last, last + 2] holds the first two steps only
+    tmp = Path(tempfile.mkdtemp())
+    line_csv(tmp)
+    (tmp / "c.py").write_text(INTERVAL_CANDIDATE.format(top=2))
+    _, out = run_cli(tmp / "line.csv", "--horizon", "4", "--season", "1", "--origins", "3",
+                     "--candidate", str(tmp / "c.py"), "--level", "80", "95")
+    assert re.search(r"\b80\s+50\.0%\s+2\.00\b", out) and re.search(r"\b95\s+50\.0%\s+2\.00\b", out), out
+
+
+def test_level_needs_a_candidate_with_forecast_interval():
+    tmp = Path(tempfile.mkdtemp())
+    line_csv(tmp)
+    (tmp / "plain.py").write_text("import numpy as np\ndef forecast(train, h):\n    return np.repeat(train.iloc[-1], h)\n")
+    for args, word in ((("--level", "80"), "--candidate"), (("--candidate", str(tmp / "plain.py"), "--level", "80"), "forecast_interval")):
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            assert raises(SystemExit, lambda: run_cli(tmp / "line.csv", "--horizon", "4", *args))
+        assert word in err.getvalue(), err.getvalue()
+
+
+def test_a_backwards_interval_is_refused():
+    tmp = Path(tempfile.mkdtemp())
+    line_csv(tmp)
+    (tmp / "bad.py").write_text(INTERVAL_CANDIDATE.format(top=-2))  # upper below lower
+    msg = exit_message(lambda: run_cli(tmp / "line.csv", "--horizon", "4", "--season", "1", "--origins", "3",
+                                       "--candidate", str(tmp / "bad.py"), "--level", "80"))
+    assert "no series could be scored" in msg and "lower <= upper" in msg, msg
 
 
 if __name__ == "__main__":
