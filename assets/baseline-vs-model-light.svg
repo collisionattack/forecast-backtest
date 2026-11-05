@@ -1,14 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="320" viewBox="0 0 760 320" role="img" aria-labelledby="t d" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="332" viewBox="0 0 760 332" role="img" aria-labelledby="t d" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
 <title id="t">forecast error on store item demand</title>
 <desc id="d">mean absolute error over 90 days for four models: last year's same days 8.88, holt-winters 9.96, seasonal naive 11.71, naive 13.29. lower is better.</desc>
-<style>.num{font-variant-numeric:tabular-nums}.bg{fill:#f6f8fa;stroke:#d0d7de}.ink{fill:#24292f}.muted{fill:#57606a}.accent{fill:#0969da}.strong{fill:#57606a}.mark{fill:#8c959f}.faint{fill:#d0d7de}.train{fill:#6e7781}.on-accent{fill:#ffffff}.on-train{fill:#ffffff}.line{stroke:#d0d7de}.axis{stroke:#8c959f}.head{fill:#8c959f}</style>
-<rect class="bg" x="0.5" y="0.5" width="759" height="319" rx="8"/>
-<text class="ink" x="28" y="40" font-size="18" font-weight="600">store item demand: forecast error over 90 days</text>
-<text class="muted" x="28" y="62" font-size="13">mean absolute error across 500 daily series and 3 origins, lower is better</text>
-<line class="line" x1="246" y1="84" x2="246" y2="266" stroke-width="1"/>
-<text class="ink" x="232" y="111" text-anchor="end" font-size="14">last year's same days (364)</text><path class="strong" d="M246 94H546.1a2 2 0 0 1 2 2V116a2 2 0 0 1 -2 2H246Z"/><text class="ink num" x="558.1" y="111" font-size="14" font-weight="600">8.88</text>
-<text class="ink" x="232" y="159" text-anchor="end" font-size="14">holt-winters, weekly</text><path class="accent" d="M246 142H582.6a2 2 0 0 1 2 2V164a2 2 0 0 1 -2 2H246Z"/><text class="ink num" x="594.6" y="159" font-size="14" font-weight="600">9.96</text>
-<text class="ink" x="232" y="207" text-anchor="end" font-size="14">seasonal naive (7)</text><path class="mark" d="M246 190H642.2a2 2 0 0 1 2 2V212a2 2 0 0 1 -2 2H246Z"/><text class="ink num" x="654.2" y="207" font-size="14" font-weight="600">11.71</text>
-<text class="ink" x="232" y="255" text-anchor="end" font-size="14">naive</text><path class="mark" d="M246 238H695.9a2 2 0 0 1 2 2V260a2 2 0 0 1 -2 2H246Z"/><text class="ink num" x="707.9" y="255" font-size="14" font-weight="600">13.29</text>
-<text class="muted" x="28" y="298" font-size="13">weekly holt-winters beats seasonal naive (7) in 478 of 500 series. its mean error is higher than last year's same days.</text>
+<style>.num{font-variant-numeric:tabular-nums}.bg{fill:#fbf9ff;stroke:#e3ddf3}.ink{fill:#241f3a}.muted{fill:#6a6584}.on{fill:#1d1b2e}.faint{fill:#ece8f8;stroke:#d9d2ee}.line{stroke:#e3ddf3}.axis{stroke:#6a6584}.head{fill:#6a6584}.mint{fill:#8fe3cc;stroke:#2b9e84}.coral{fill:#ffa5b9;stroke:#dd4b6e}.sky{fill:#94d0ff;stroke:#3b8fd6}.lilac{fill:#c5b8ff;stroke:#7c64e6}</style>
+<rect class="bg" x="0.5" y="0.5" width="759" height="331" rx="14"/>
+<text class="ink" x="30" y="44" font-size="20" font-weight="700">store item demand: forecast error over 90 days</text>
+<text class="muted" x="30" y="67" font-size="13.5">mean absolute error across 500 daily series and 3 origins, lower is better</text>
+<line class="line" x1="250" y1="86" x2="250" y2="282" stroke-width="1.5"/>
+<text class="ink" x="234" y="116" text-anchor="end" font-size="15">last year's same days (364)</text><path class="mint" stroke-width="1.5" d="M250 98H530.2a13.0 13.0 0 0 1 13.0 13.0a13.0 13.0 0 0 1 -13.0 13.0H250Z"/><text class="ink num" x="555.2" y="117" font-size="16" font-weight="700">8.88</text>
+<text class="ink" x="234" y="166" text-anchor="end" font-size="15">holt-winters, weekly</text><path class="coral" stroke-width="1.5" d="M250 148H565.6a13.0 13.0 0 0 1 13.0 13.0a13.0 13.0 0 0 1 -13.0 13.0H250Z"/><text class="ink num" x="590.6" y="167" font-size="16" font-weight="700">9.96</text>
+<text class="ink" x="234" y="216" text-anchor="end" font-size="15">seasonal naive (7)</text><path class="sky" stroke-width="1.5" d="M250 198H623.5a13.0 13.0 0 0 1 13.0 13.0a13.0 13.0 0 0 1 -13.0 13.0H250Z"/><text class="ink num" x="648.5" y="217" font-size="16" font-weight="700">11.71</text>
+<text class="ink" x="234" y="266" text-anchor="end" font-size="15">naive</text><path class="lilac" stroke-width="1.5" d="M250 248H675.6a13.0 13.0 0 0 1 13.0 13.0a13.0 13.0 0 0 1 -13.0 13.0H250Z"/><text class="ink num" x="700.6" y="267" font-size="16" font-weight="700">13.29</text>
+<text class="muted" x="30" y="310" font-size="13.5">weekly holt-winters beats seasonal naive (7) in 478 of 500 series. its mean error is higher than last year's same days.</text>
 </svg>
