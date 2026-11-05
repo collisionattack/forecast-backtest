@@ -35,6 +35,9 @@ def drift(train, h, m):
 def load(path, date, target, ids=None, date_format=None):
     """Returns {label: series}: one entry per --id group, or a single entry without --id."""
     df = pd.read_csv(path)
+    missing = [c for c in [date, target, *(ids or [])] if c not in df.columns]
+    if missing:
+        sys.exit(f"not in the CSV: {', '.join(missing)}. Columns are: {', '.join(map(str, df.columns))}")
     try:  # pandas infers the format from the first value and refuses rows that do not match it
         df[date] = pd.to_datetime(df[date], format=date_format)
     except ValueError as e:
@@ -118,8 +121,8 @@ def main(argv=None):
     p.add_argument("--candidate", help="python file defining forecast(train, h)")
     p.add_argument("--by-horizon", action="store_true", help="also print MASE per horizon step")
     a = p.parse_args(argv)
-    if min(a.season, a.horizon, a.origins, a.max_series or 1) < 1:
-        p.error("--season, --horizon, --origins and --max-series must be >= 1")
+    if min(a.season, a.horizon, a.origins, a.max_series or 1, a.step or 1) < 1:
+        p.error("--season, --horizon, --origins, --step and --max-series must be >= 1")
 
     models = {"naive": naive, "drift": drift}
     if a.season > 1:  # with season 1, seasonal naive is identical to naive

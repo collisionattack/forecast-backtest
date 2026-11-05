@@ -141,6 +141,25 @@ def test_candidate_editing_train_in_place_does_not_change_the_baselines():
         assert np.isclose(clean.loc[name, "MASE"], dirty.loc[name, "MASE"]), name
 
 
+def test_missing_column_names_the_columns_that_exist():
+    tmp = Path(tempfile.mkdtemp())
+    pd.DataFrame({"d": ["2020-01-01", "2020-01-02", "2020-01-03"], "y": [1, 2, 3]}).to_csv(tmp / "c.csv", index=False)
+    try:
+        bt.load(str(tmp / "c.csv"), "d", "sale")
+    except SystemExit as e:  # a plain KeyError traceback used to be the only hint
+        assert "sale" in str(e) and "Columns are: d, y" in str(e), str(e)
+    else:
+        raise AssertionError("expected SystemExit")
+
+
+def test_step_must_be_at_least_one():
+    tmp = Path(tempfile.mkdtemp())
+    write_multi_csv(tmp / "m.csv")
+    with contextlib.redirect_stderr(io.StringIO()) as err:  # argparse prints the usage line here
+        assert raises(SystemExit, lambda: run_cli(tmp / "m.csv", "--step", "-1"))
+    assert "--step" in err.getvalue()
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):
