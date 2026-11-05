@@ -63,6 +63,6 @@ It is one small dataset and eight origins, so treat it as a smoke test.
 - Scores over many series weight every series equally. There is no volume weighting.
 - Expanding training window only.
 - No check of prediction-interval coverage yet.
-- A training window with no variation stops the run, because MASE is undefined there.
+- A training window with no variation makes MASE undefined. That series is skipped and counted, and the run stops only when no series can be scored.
 
 MIT licensed, see [LICENSE](LICENSE).

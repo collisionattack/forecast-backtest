@@ -66,5 +66,6 @@ def forecast(train, h):  # train is a pd.Series with a DatetimeIndex
   baseline. Series that are too short or flat are skipped and counted in the output.
   `--max-series N` takes the first N series in id order, not a random sample.
 - Expanding training window only.
-- A training window with no variation stops the run, because MASE is undefined there.
+- A training window with no variation makes MASE undefined. That series is skipped and
+  counted, and the run stops only when no series can be scored.
 - Needs Python 3 with pandas and numpy.
