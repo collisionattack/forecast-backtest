@@ -16,7 +16,7 @@ Clone it straight into your skills folder:
 git clone https://github.com/collisionattack/forecast-backtest ~/.claude/skills/forecast-backtest
 ```
 
-You need Python 3 with pandas and numpy. The ETS example also needs statsmodels.
+You need Python 3 with pandas 2 or newer and numpy. The ETS example also needs statsmodels.
 
 ## Use
 
@@ -28,7 +28,11 @@ You can also run the script yourself:
 python3 scripts/backtest.py data.csv --date date --target sales --horizon 28 --season 7 --origins 8
 ```
 
+Dates are read with pandas' format inference. For day-first dates such as `05-02-2010`, add `--date-format %d-%m-%Y`. Without it the script stops with a message instead of guessing.
+
 To score your own model, pass a Python file that defines `forecast(train, h)`. `train` is a pandas Series with a DatetimeIndex and `h` is the number of periods to return. Add `--candidate my_model.py` to the command, and `--by-horizon` to see the error at each step ahead.
+
+For data with many series, name the columns that identify one with `--id`, for example `--id store item`. The script scores each series on its own and averages MASE with equal weight per series. It also prints in how many series the candidate beats the best baseline. Series that are too short or have no variation are skipped and counted. `--max-series 50` scores only the first 50 series in id order, which keeps a slow model like ETS manageable.
 
 The metric is MASE, the average error divided by the in-sample error of a seasonal naive forecast. Lower is better, and the number compares across series. MAE comes along in the original units. Run the tests with `python3 scripts/test_backtest.py`.
 
@@ -56,7 +60,7 @@ It is one small dataset and eight origins, so treat it as a smoke test.
 
 ## Limits
 
-- One series per run. For many stores or items, filter to one id or loop over ids.
+- Scores over many series weight every series equally. There is no volume weighting.
 - Expanding training window only.
 - No check of prediction-interval coverage yet.
 - A training window with no variation stops the run, because MASE is undefined there.

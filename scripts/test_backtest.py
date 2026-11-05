@@ -1,4 +1,6 @@
 """Self-check for backtest.py. Run: python3 test_backtest.py (pytest also works)."""
+import contextlib
+import io
 import tempfile
 from pathlib import Path
 
@@ -15,6 +17,35 @@ def make(values, freq="MS"):
 def run(y, h=12, m=12, origins=5, step=None, extra=None):
     models = {"naive": bt.naive, "seasonal_naive": bt.seasonal_naive, "drift": bt.drift, **(extra or {})}
     return bt.backtest(y, models, h, m, origins, step or h)
+
+
+def raises(exc, fn):
+    try:
+        fn()
+    except exc:
+        return True
+    return False
+
+
+def write_multi_csv(path):
+    """Two clean seasonal series (a, b) and one too short to score (tiny)."""
+    rng = np.random.default_rng(3)
+    t = np.arange(72)
+    frames = [
+        pd.DataFrame({"id": sid, "date": pd.date_range("2000-01-01", periods=72, freq="MS"),
+                      "y": 20 + amp * np.sin(2 * np.pi * t / 12) + rng.normal(0, 0.2, 72)})
+        for sid, amp in (("a", 5), ("b", 8))
+    ]
+    frames.append(pd.DataFrame({"id": "tiny", "date": pd.date_range("2000-01-01", periods=10, freq="MS"),
+                                "y": np.arange(10.0)}))
+    pd.concat(frames).to_csv(path, index=False)
+
+
+def run_cli(csv, *extra):
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        table = bt.main([str(csv), "--date", "date", "--target", "y", "--horizon", "12", "--season", "12", *extra])
+    return table, out.getvalue()
 
 
 def test_seasonal_series_seasonal_naive_wins():
@@ -51,16 +82,53 @@ def test_candidate_plugin_matches_naive_when_it_is_naive():
 def test_bad_input_is_refused():
     tmp = Path(tempfile.mkdtemp())
     pd.DataFrame({"d": ["2020-01-01", "2020-01-01", "2020-01-02"], "y": [1, 2, 3]}).to_csv(tmp / "dup.csv", index=False)
-    for call in (
-        lambda: bt.load(str(tmp / "dup.csv"), "d", "y"),
-        lambda: run(make(np.ones(100))),  # constant series: MASE undefined
-        lambda: run(make(np.arange(20.0))),  # too short for horizon 12 + 2 seasons
-    ):
-        try:
-            call()
-        except SystemExit:
-            continue
-        raise AssertionError("expected SystemExit")
+    assert raises(SystemExit, lambda: bt.load(str(tmp / "dup.csv"), "d", "y"))  # duplicate dates
+    assert raises(ValueError, lambda: run(make(np.ones(100))))  # flat series: MASE undefined
+    assert raises(ValueError, lambda: run(make(np.arange(20.0))))  # too short for horizon 12 + 2 seasons
+    nan_model = {"bad": lambda train, h, m: np.full(h, np.nan)}
+    assert raises(ValueError, lambda: run(make(np.arange(100.0) % 12 + np.arange(100.0)), extra=nan_model))
+
+
+def test_day_first_dates_need_a_format_and_then_parse_correctly():
+    tmp = Path(tempfile.mkdtemp())
+    d = pd.date_range("2010-02-05", periods=60, freq="7D")
+    pd.DataFrame({"d": d.strftime("%d-%m-%Y"), "y": np.arange(60.0)}).to_csv(tmp / "w.csv", index=False)
+    assert raises(SystemExit, lambda: bt.load(str(tmp / "w.csv"), "d", "y"))  # refused, not silently misread
+    s = bt.load(str(tmp / "w.csv"), "d", "y", date_format="%d-%m-%Y")["series"]
+    assert (s.index[1] - s.index[0]).days == 7 and s.index.freq is not None
+
+
+def test_beats_needs_a_strictly_lower_mase():
+    t = pd.DataFrame({"MAE": [1.0, 2.0, 2.0], "MASE": [0.5, 1.0, 1.0]}, index=["candidate", "naive", "drift"])
+    assert bt.beats(t, ["naive", "drift"])
+    t.loc["candidate", "MASE"] = 1.0
+    assert not bt.beats(t, ["naive", "drift"])
+
+
+def test_multi_series_averages_and_skips_short_series():
+    tmp = Path(tempfile.mkdtemp())
+    write_multi_csv(tmp / "m.csv")
+    table, out = run_cli(tmp / "m.csv", "--id", "id")
+    assert table.index[0] == "seasonal_naive"
+    assert "series: 2 scored, 1 skipped" in out and "skipped tiny: series too short" in out
+
+
+def test_max_series_limits_the_run():
+    tmp = Path(tempfile.mkdtemp())
+    write_multi_csv(tmp / "m.csv")
+    _, out = run_cli(tmp / "m.csv", "--id", "id", "--max-series", "1")
+    assert "series: 1 scored, 0 skipped" in out
+
+
+def test_multi_series_counts_candidate_wins():
+    # averaging the last 3 seasons removes noise that seasonal naive copies, so it should win on both series
+    tmp = Path(tempfile.mkdtemp())
+    write_multi_csv(tmp / "m.csv")
+    (tmp / "avg3.py").write_text(
+        "import numpy as np\ndef forecast(train, h):\n"
+        "    return np.resize(train.to_numpy()[-36:].reshape(3, 12).mean(axis=0), h)\n")
+    _, out = run_cli(tmp / "m.csv", "--id", "id", "--origins", "3", "--candidate", str(tmp / "avg3.py"))
+    assert "candidate beats the best baseline in 2 of 2 series" in out
 
 
 if __name__ == "__main__":

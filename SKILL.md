@@ -15,7 +15,8 @@ Report that comparison even when it is bad news. Do not jump to a fancy model fi
    Metric: MASE (scale-free) plus MAE (in real units). Avoid MAPE when the target has
    zeros or near-zeros. For quantile forecasts use pinball loss.
 2. **Check the data.** Sort by time, no duplicate timestamps, never fill missing values
-   silently, note gaps. Leakage check: every feature must be known at forecast time
+   silently, note gaps, and confirm the dates parse the way you think (`--date-format
+   %d-%m-%Y` for day-first dates). Leakage check: every feature must be known at forecast time
    (lagged or as-of values only), and scalers/encoders are fit on the training window only.
 3. **Baselines first.** Run `scripts/backtest.py` with no candidate. It scores naive,
    seasonal naive and drift over several forecast origins.
@@ -27,8 +28,9 @@ Report that comparison even when it is bad news. Do not jump to a fancy model fi
    gaps are noise: raise `--origins` or shrink `--step`.
 6. **Uncertainty.** If the user needs ranges, produce prediction intervals and check their
    empirical coverage on the same backtest. The script does not do this yet.
-7. **Report.** Table of MAE and MASE per model, number of origins, MASE by horizon step
-   (`--by-horizon`), and the caveats (gaps, short history, structural breaks).
+7. **Report.** Table of MAE and MASE per model, number of origins (and series scored versus
+   skipped), MASE by horizon step (`--by-horizon`), and the caveats (gaps, short history,
+   structural breaks).
 
 ## Usage
 
@@ -36,6 +38,9 @@ Report that comparison even when it is bad news. Do not jump to a fancy model fi
 python3 scripts/backtest.py data.csv --date date --target sales --horizon 28 --season 7 --origins 8
 python3 scripts/backtest.py data.csv --date date --target sales --horizon 28 --season 7 \
   --candidate my_model.py --by-horizon
+# many stores or items: name the columns that identify one series
+python3 scripts/backtest.py data.csv --date date --target sales --id store item \
+  --horizon 28 --season 7 --max-series 50 --candidate my_model.py
 ```
 
 Candidate file example (needs `statsmodels`):
@@ -50,8 +55,10 @@ def forecast(train, h):  # train is a pd.Series with a DatetimeIndex
 
 ## Limits
 
-- One series per run. For multi-series data (many stores or items), filter to one id or
-  loop over ids and compare the tables.
+- Many series: `--id` scores each series on its own, then averages MASE with equal weight
+  per series (no volume weighting) and counts the series where the candidate beats the best
+  baseline. Series that are too short or flat are skipped and counted in the output.
+  `--max-series N` takes the first N series in id order, not a random sample.
 - Expanding training window only.
 - A training window with no variation stops the run, because MASE is undefined there.
 - Needs Python 3 with pandas and numpy.
