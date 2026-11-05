@@ -22,8 +22,10 @@ Report that comparison even when it is bad news. Do not jump to a fancy model fi
    seasonal naive and drift over several forecast origins. If the horizon is long or the
    data repeats yearly, also run it with the longest natural season (364 for daily data,
    52 for weekly) and compare MAE across the runs, because MASE is scaled by `--season`
-   and cannot be compared between different values. A candidate that beats only the
-   short-season baseline has not beaten the best baseline.
+   and cannot be compared between different values. First check that naive's MAE is the
+   same in both runs: naive does not depend on `--season`, so a different value means the
+   longer season dropped origins or series and the runs scored different data. A candidate
+   that beats only the short-season baseline has not beaten the best baseline.
 4. **Candidate.** Write `forecast(train, h)` in its own file, return `h` values, and run
    the script again with `--candidate`. Start simple (ETS/ARIMA, or a GBM on lag features)
    before anything heavier.
