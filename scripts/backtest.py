@@ -100,7 +100,7 @@ def load_candidate(path):
     spec = importlib.util.spec_from_file_location("candidate", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    return lambda train, h, m: mod.forecast(train, h)
+    return lambda train, h, m: mod.forecast(train.copy(), h)  # train is a slice of the data, an in-place edit would change it
 
 
 def main(argv=None):

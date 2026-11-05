@@ -131,6 +131,16 @@ def test_multi_series_counts_candidate_wins():
     assert "candidate beats the best baseline in 2 of 2 series" in out
 
 
+def test_candidate_editing_train_in_place_does_not_change_the_baselines():
+    tmp = Path(tempfile.mkdtemp())
+    (tmp / "m.py").write_text("import numpy as np\ndef forecast(train, h):\n    train /= 2\n    return np.repeat(train.iloc[-1], h)\n")
+    values = np.arange(100.0) % 12 + 0.1 * np.arange(100)
+    clean, _, _ = run(make(values.copy()), h=6, origins=4, step=6)
+    dirty, _, _ = run(make(values.copy()), h=6, origins=4, step=6, extra={"candidate": bt.load_candidate(str(tmp / "m.py"))})
+    for name in ("naive", "seasonal_naive", "drift"):
+        assert np.isclose(clean.loc[name, "MASE"], dirty.loc[name, "MASE"]), name
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):
