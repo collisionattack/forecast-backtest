@@ -188,11 +188,27 @@ def test_a_single_series_with_a_missing_target_stops_with_the_reason():
     assert "no series could be scored" in msg and "missing values" in msg, msg
 
 
-def test_run_stops_when_every_series_is_flat():
+def test_a_series_that_never_varies_gets_its_own_line_instead_of_a_score():
     tmp = Path(tempfile.mkdtemp())
     pd.DataFrame({"date": pd.date_range("2000-01-01", periods=60, freq="MS"), "y": 1.0}).to_csv(tmp / "f.csv", index=False)
-    msg = exit_message(lambda: run_cli(tmp / "f.csv"))
-    assert "no series could be scored" in msg and "no variation" in msg, msg
+    table, out = run_cli(tmp / "f.csv")  # nothing has a MASE, so there is no table
+    assert table is None and "flat series: 1" in out and "mean absolute error per model" in out, out
+    assert re.search(r"^naive\s+0\.0$", out, re.M), out  # naive reproduces a constant exactly
+
+
+def test_flat_series_are_counted_next_to_the_scored_ones():
+    tmp = Path(tempfile.mkdtemp())
+    d = pd.date_range("2000-01-01", periods=72, freq="MS")
+    varied = 20 + 5 * np.sin(2 * np.pi * np.arange(72) / 12) + np.random.default_rng(4).normal(0, 0.2, 72)
+    pd.concat([pd.DataFrame({"id": "a", "date": d, "y": varied}), pd.DataFrame({"id": "flat", "date": d, "y": 5.0})]).to_csv(tmp / "m.csv", index=False)
+    table, out = run_cli(tmp / "m.csv", "--id", "id")
+    assert "series: 1 scored, 0 skipped, 1 flat" in out and "flat series: 1" in out and np.isfinite(table["MASE"]).all(), out
+
+
+def test_a_flat_rolling_window_still_has_a_scale_from_the_history():
+    y = make(np.r_[np.arange(40.0) % 7 + 1, np.zeros(60)])  # varies early, then zeros, so every 30-point window is flat
+    table, _, k = bt.backtest(y, {"naive": bt.naive}, 4, 1, 3, 4, window=30)
+    assert k == 3 and np.isfinite(table["MASE"]).all()
 
 
 def test_gappy_dates_print_one_warning():

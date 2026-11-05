@@ -76,6 +76,7 @@ def forecast(train, h):  # train is a pd.Series with a DatetimeIndex
   values are skipped and counted in the output. `--max-series N` takes the first N series in id order, not a
   random sample.
 - The expanding window is the default. `--window N` switches to a rolling window of N points.
-- MASE is undefined where a training window has no variation. That origin is left out, a series is skipped
-  only when every origin is flat, and the run stops only when no series can be scored.
+- MASE scales by the seasonal-naive error of everything before the origin, also with `--window`. An origin
+  with no variation before it is left out. A series that never varies gets no MASE and is listed on a line of
+  its own with each model's MAE.
 - Needs Python 3 with pandas and numpy.

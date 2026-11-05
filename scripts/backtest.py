@@ -61,46 +61,66 @@ def load(path, date, target, ids=None, date_format=None):
     return out
 
 
+class FlatSeries(ValueError):
+    """Nothing varied before any origin, so MASE has no scale. mae holds each model's mean absolute error over the origins."""
+
+    def __init__(self, mae):
+        super().__init__("no variation anywhere in the history, MASE has no scale")
+        self.mae = mae
+
+
 def backtest(y, models, h, m, origins, step, longest=None, intervals=None, levels=(), cover=None, window=None, volumes=None):
     """models: {name: fn(train, h, m) -> h values}. Returns (summary, mase_by_horizon, n_origins).
     m is the season that scales MASE. longest (default m) is the longest season scored and sets the shortest training
     window, so every model sees the same origins. window trains on the last `window` points instead of everything
     before the origin, and only origins with that many points are used. With intervals(train, h, level) -> (lower,
     upper), cover[level] gets one (share of test points inside, mean width / scale) pair per origin. volumes gets the
-    mean absolute target of each scored test window. An origin whose training window has no variation is left out,
-    because MASE is undefined there. Raises ValueError when this series cannot be scored (missing values, too short,
-    every window flat, non-finite forecast)."""
+    mean absolute target of each scored test window. The MASE scale is the seasonal-naive error of everything before the
+    origin, so a flat rolling window still has one. An origin with no variation anywhere before it is left out. Raises
+    FlatSeries, a ValueError that carries each model's MAE, when that holds for every origin. Raises ValueError when this
+    series cannot be scored (missing values, too short, non-finite forecast)."""
     if y.isna().any():
         raise ValueError("target has missing values, decide how to handle them, they are never filled silently")
     min_train = max(2 * (longest or m), 10, window or 0)
     cuts = sorted(c for c in (len(y) - h - k * step for k in range(origins)) if c >= min_train)
     if not cuts:
         raise ValueError(f"series too short: {len(y)} points, need at least {min_train + h}")
-    abs_err = {name: [] for name in models}
-    scales = []
-    for c in cuts:
-        train, test = y.iloc[c - window if window else 0:c], y.iloc[c:c + h].to_numpy()
-        x = train.to_numpy()
-        scale = np.abs(x[m:] - x[:-m]).mean()  # in-sample seasonal-naive MAE, the MASE denominator
-        if scale == 0:  # MASE is undefined for this origin, the others of the series still count
-            continue
-        scales.append(scale)
-        if volumes is not None:
-            volumes.append(np.abs(test).mean())
+    def split(c):
+        return y.iloc[c - window if window else 0:c], y.iloc[c:c + h].to_numpy()
+
+    def run_models(train, test, c):  # absolute error of every model at origin c
+        errors = {}
         for name, fn in models.items():
             f = np.asarray(fn(train, h, m), dtype=float)
             if f.shape != (h,):
                 sys.exit(f"{name}: expected {h} forecast values, got shape {f.shape}")
             if not np.isfinite(f).all():
                 raise ValueError(f"{name} returned non-finite forecasts at row {c}")
-            abs_err[name].append(np.abs(f - test))
+            errors[name] = np.abs(f - test)
+        return errors
+
+    abs_err = {name: [] for name in models}
+    scales, flat = [], []
+    for c in cuts:
+        train, test = split(c)
+        past = y.iloc[:c].to_numpy()  # the scale reads everything before the origin, not only the window the models train on
+        scale = np.abs(past[m:] - past[:-m]).mean()  # in-sample seasonal-naive MAE, the MASE denominator
+        if scale == 0:  # nothing varied before this origin, MASE has no scale here
+            flat.append(c)
+            continue
+        scales.append(scale)
+        if volumes is not None:
+            volumes.append(np.abs(test).mean())
+        for name, e in run_models(train, test, c).items():
+            abs_err[name].append(e)
         for level in levels:
             lo, hi = (np.asarray(v, dtype=float) for v in intervals(train, h, level))
             if lo.shape != (h,) or hi.shape != (h,) or not (np.isfinite(lo).all() and np.isfinite(hi).all()) or (lo > hi).any():
                 raise ValueError(f"interval at level {level} must be two arrays of {h} finite values with lower <= upper, row {c}")
             cover.setdefault(level, []).append((((lo <= test) & (test <= hi)).mean(), (hi - lo).mean() / scale))
-    if not scales:
-        raise ValueError("every training window has no variation, MASE is undefined")
+    if not scales:  # flat before every origin: no MASE, but the errors are still worth reporting
+        errors = [run_models(*split(c), c) for c in flat]
+        raise FlatSeries({name: float(np.mean([e[name] for e in errors])) for name in models})
     scales = np.array(scales)[:, None]
     abs_err = {name: np.array(v) for name, v in abs_err.items()}  # origins x h
     table = pd.DataFrame(
@@ -187,7 +207,7 @@ def main(argv=None):
     series = load(a.csv, a.date, a.target, a.id, a.date_format)
     if a.max_series:
         series = dict(list(series.items())[:a.max_series])
-    results, skipped, covers, volumes = [], {}, [], []
+    results, skipped, covers, volumes, flats = [], {}, [], [], {}
     for label, y in series.items():
         cov, vol = {}, []
         try:
@@ -195,11 +215,29 @@ def main(argv=None):
                                     max(a.season), intervals, a.level or (), cov, a.window, vol))
             covers.append(cov)
             volumes.append(np.mean(vol))
+        except FlatSeries as e:  # never varied: no MASE for it, its MAE goes on a line of its own
+            flats[label] = e.mae
         except ValueError as e:
             skipped[label] = str(e)
-    if not results:
+
+    def show_skipped_and_flat():
+        for label, why in list(skipped.items())[:3]:
+            print(f"skipped {label}: {why}")
+        if len(skipped) > 3:
+            print(f"... and {len(skipped) - 3} more skipped")
+        if flats:
+            print(f"\nflat series: {len(flats)} with no variation in their history, so MASE has no scale. "
+                  "mean absolute error per model:")
+            print(pd.DataFrame(flats).mean(axis=1).sort_values().round(3).to_string())
+
+    if not results and not flats:
         label, why = next(iter(skipped.items()))
         sys.exit(f"no series could be scored, for example {label}: {why}")
+    if not results:  # everything was flat or skipped, there is no MASE table to print
+        if a.id:
+            print(f"series: 0 scored, {len(skipped)} skipped, {len(flats)} flat")
+        show_skipped_and_flat()
+        return None
     tables, by_hs, ks = zip(*results)
     w = np.array(volumes) if a.weight == "volume" else np.ones(len(results))
     if w.sum() == 0:
@@ -211,13 +249,11 @@ def main(argv=None):
     print(f"origins: {origins}, horizon: {a.horizon}, season: {' '.join(map(str, a.season))}"
           + (f", window: {a.window}" if a.window else ""))
     if a.id:
-        print(f"series: {len(results)} scored, {len(skipped)} skipped, scores are averages over series"
+        print(f"series: {len(results)} scored, {len(skipped)} skipped" + (f", {len(flats)} flat" if flats else "")
+              + ", scores are averages over series"
               + (" weighted by mean target value in the scored windows" if a.weight == "volume" else ""))
     print("\n" + table.round(3).to_string())
-    for label, why in list(skipped.items())[:3]:
-        print(f"skipped {label}: {why}")
-    if len(skipped) > 3:
-        print(f"... and {len(skipped) - 3} more skipped")
+    show_skipped_and_flat()
     if a.by_horizon:
         print("\nMASE by horizon step\n" + by_h.round(3).to_string())
     if a.candidate:

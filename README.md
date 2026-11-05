@@ -120,9 +120,9 @@ a single train/test split gives one error from one stretch of time. the script f
 
 the baselines are naive (repeat the last value), seasonal naive (repeat the last season) and drift (extend the line from the first point to the last). they run in seconds, and a model that cannot beat them is not worth the extra complexity. when your model does not beat the best baseline, the output says so and recommends the baseline.
 
-two metrics come out. mae is in the units of your data, so a person can read it. mase divides the error by the in-sample error of a seasonal naive forecast, which lets you compare and average series of different size. mase is scaled by the first `--season`, so compare it only between runs that start with the same season.
+two metrics come out. mae is in the units of your data, so a person can read it. mase divides the error by the in-sample error of a seasonal naive forecast over everything before the origin, which lets you compare and average series of different size, and compare runs with different `--window` values. mase is scaled by the first `--season`, so compare it only between runs that start with the same season.
 
-series with missing values, too little history or no variation in any window are skipped and counted, never filled in. a single flat window only drops that origin. a filled-in value is a made-up result, and the output says how many series were scored and how many were skipped.
+series with missing values or too little history are skipped and counted, never filled in. a filled-in value is a made-up result, and the output says how many series were scored and how many were skipped. a series that never varies cannot get a mase, so it is listed on a line of its own with each model's mae, and an origin with no variation before it is left out of its series.
 
 ## what is in the repo
 
@@ -152,7 +152,7 @@ series with missing values, too little history or no variation in any window are
 
 ## limits
 
-- mase is undefined where a training window has no variation. that origin is left out, a series is skipped only when every origin is flat, and the run stops only when no series can be scored.
+- a series that is flat for its whole history has no mase scale. it is not scored, and its mae per model is listed on a line of its own.
 - the numbers here come from three public datasets (air passengers, store item demand, walmart store sales). the ranking of models changes between them, so they demonstrate the skill and say nothing about which model is best in general.
 
 mit licensed, see [license](LICENSE).
