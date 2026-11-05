@@ -35,7 +35,7 @@ you can also run the script yourself:
 python3 scripts/backtest.py data.csv --date date --target sales --horizon 28 --season 7 --origins 8
 ```
 
-to score your own model, pass a python file that defines `forecast(train, h)`. `train` is a pandas series with a datetime index and `h` is the number of periods to return. you get a copy of `train`, so editing it changes nothing outside your function. add `--candidate my_model.py` to the command. for prediction intervals, also define `forecast_interval(train, h, level)` in the same file, returning `(lower, upper)` with `h` values each, and add `--level 80 95`.
+to score your own model, pass a python file that defines `forecast(train, h)`. `train` is a pandas series with a datetime index and `h` is the number of periods to return. you get a copy of `train`, so editing it changes nothing outside your function. add `--candidate my_model.py` to the command, or several files to compare models in one table. for prediction intervals, also define `forecast_interval(train, h, level)` in the same file, returning `(lower, upper)` with `h` values each, and add `--level 80 95`.
 
 dates are read with pandas' format inference. for day-first dates such as `05-02-2010`, add `--date-format %d-%m-%Y`. without it the script stops with a message.
 
@@ -146,13 +146,13 @@ series with missing values or too little history are skipped and counted, never 
 | `--id store item` | scores each series on its own, then averages | 500 products need 500 scores, and one average hides the bad ones. the output counts series scored and skipped, and the series where your model beats the best baseline |
 | `--weight volume` | averages series weighted by their mean absolute target value in the scored windows | equal weight lets a product that sells 3 units count as much as one that sells 3000 |
 | `--max-series N` | scores only the first `N` series in id order | keeps a slow model quick to try. the first `N` are not a random sample, so report scores from a full run |
-| `--candidate`, `--by-horizon` | adds your model to the table, and prints the error at each step ahead | `--by-horizon` shows whether a model wins only at short range |
+| `--candidate`, `--by-horizon` | adds your model to the table. several files add several models, named after the files and scored on the same windows. `--by-horizon` prints the error at each step ahead | which model is best depends on the data, and one run with every candidate keeps the windows identical. `--by-horizon` shows whether a model wins only at short range |
 | `--level 80 95` | share of test points inside each interval, and the mean width in mase units | a range helps only if actual values land inside it about as often as the level says. coverage far above the level means the ranges are too wide, far below means too narrow |
 | `--date-format` | strptime format of the date column | pandas guesses the format from the first row. on day-first dates that guess was silently wrong in one test (walmart), so the script stops on a mismatch |
 
 ## limits
 
 - a series that is flat for its whole history has no mase scale. it is not scored, and its mae per model is listed on a line of its own.
-- the numbers here come from three public datasets (air passengers, store item demand, walmart store sales). the ranking of models changes between them, so they demonstrate the skill and say nothing about which model is best in general.
+- the numbers here come from three public datasets (air passengers, store item demand, walmart store sales). the ranking of models changes between them, so they demonstrate the skill and say nothing about which model is best in general. the answer for your data comes from a run on your data with all your candidates in it.
 
 mit licensed, see [license](LICENSE).

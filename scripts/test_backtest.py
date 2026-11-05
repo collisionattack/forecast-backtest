@@ -366,6 +366,41 @@ def test_volume_weight_stops_when_every_scored_window_is_zero():
     assert "zero volume" in msg, msg
 
 
+def test_several_candidates_share_one_table_and_match_their_solo_runs():
+    tmp = Path(tempfile.mkdtemp())
+    write_multi_csv(tmp / "m.csv")
+    (tmp / "repeat_last.py").write_text("import numpy as np\ndef forecast(train, h):\n    return np.repeat(train.iloc[-1], h)\n")
+    (tmp / "last_season.py").write_text("import numpy as np\ndef forecast(train, h):\n    return np.resize(train.to_numpy()[-12:], h)\n")
+    both, out = run_cli(tmp / "m.csv", "--id", "id", "--candidate", str(tmp / "repeat_last.py"), str(tmp / "last_season.py"))
+    assert {"repeat_last", "last_season"} <= set(both.index) and "candidate" not in both.index
+    assert "repeat_last MASE" in out and "last_season MASE" in out and out.count("beats the best baseline in") == 2, out
+    for name in ("repeat_last", "last_season"):  # the same numbers as when the file runs alone
+        solo, _ = run_cli(tmp / "m.csv", "--id", "id", "--candidate", str(tmp / f"{name}.py"))
+        assert np.isclose(both.loc[name, "MAE"], solo.loc["candidate", "MAE"]) and np.isclose(both.loc[name, "MASE"], solo.loc["candidate", "MASE"])
+
+
+def test_candidate_files_with_the_same_name_are_refused():
+    tmp = Path(tempfile.mkdtemp())
+    line_csv(tmp)
+    for sub in ("a", "b"):
+        (tmp / sub).mkdir()
+        (tmp / sub / "m.py").write_text("import numpy as np\ndef forecast(train, h):\n    return np.repeat(train.iloc[-1], h)\n")
+    with contextlib.redirect_stderr(io.StringIO()) as err:
+        assert raises(SystemExit, lambda: run_cli(tmp / "line.csv", "--horizon", "4", "--candidate", str(tmp / "a" / "m.py"), str(tmp / "b" / "m.py")))
+    assert "different names" in err.getvalue(), err.getvalue()
+
+
+def test_level_reports_only_the_candidates_that_define_intervals():
+    tmp = Path(tempfile.mkdtemp())
+    line_csv(tmp)
+    (tmp / "with_band.py").write_text(INTERVAL_CANDIDATE.format(top=2))
+    (tmp / "plain.py").write_text("import numpy as np\ndef forecast(train, h):\n    return np.repeat(train.iloc[-1], h)\n")
+    _, out = run_cli(tmp / "line.csv", "--horizon", "4", "--season", "1", "--origins", "3",
+                     "--candidate", str(tmp / "with_band.py"), str(tmp / "plain.py"), "--level", "80")
+    assert "prediction intervals of with_band" in out and "prediction intervals of plain" not in out, out
+    assert re.search(r"\b80\s+50\.0%\s+2\.00\b", out), out
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

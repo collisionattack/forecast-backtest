@@ -26,7 +26,8 @@ Report that comparison even when it is bad news. Do not jump to a fancy model fi
    origins (see the `origins:` line) or are skipped. A candidate that beats only the
    short-season baseline has not beaten the best baseline.
 4. **Candidate.** Write `forecast(train, h)` in its own file, return `h` values, and run
-   the script again with `--candidate`. Start simple (ETS/ARIMA, or a GBM on lag features)
+   the script again with `--candidate`. Pass several files to compare models on the same windows,
+   the table names them after the files. Start simple (ETS/ARIMA, or a GBM on lag features)
    before anything heavier.
 5. **Read the verdict.** The script prints whether the candidate beats the best baseline.
    If it does not, say so and recommend the baseline. If only a few origins fit, small
@@ -45,6 +46,9 @@ Report that comparison even when it is bad news. Do not jump to a fancy model fi
 python3 scripts/backtest.py data.csv --date date --target sales --horizon 28 --season 7 --origins 8
 python3 scripts/backtest.py data.csv --date date --target sales --horizon 28 --season 7 \
   --candidate my_model.py --by-horizon
+# several models in one table, same windows, named after their files
+python3 scripts/backtest.py data.csv --date date --target sales --horizon 28 --season 7 \
+  --candidate ets.py harmonic.py lightgbm.py
 # long horizon: give the yearly season too, every baseline is scored on the same origins
 python3 scripts/backtest.py data.csv --date date --target sales --horizon 90 --season 7 364
 # interval coverage: my_model.py also defines forecast_interval(train, h, level), see examples/ets_monthly.py
