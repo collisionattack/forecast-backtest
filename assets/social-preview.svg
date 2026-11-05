@@ -1,13 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
-<style>.num{font-variant-numeric:tabular-nums}.bg{fill:#13151f;stroke:#2b2f42}.ink{fill:#f3f4fb}.muted{fill:#a3a9c4}.on{fill:#1d1b2e}.faint{fill:#262a3b;stroke:#262a3b}.line{stroke:#2b2f42}.axis{stroke:#a3a9c4}.head{fill:#a3a9c4}.mint{fill:#74e8c8;stroke:#74e8c8}.coral{fill:#ff8fab;stroke:#ff8fab}.sky{fill:#7cc8ff;stroke:#7cc8ff}.lilac{fill:#b7a6ff;stroke:#b7a6ff}.title{fill:#f3f4fb}</style>
+<style>.num{font-variant-numeric:tabular-nums}.bg{fill:#13151f;stroke:#2b2f42}.ink{fill:#f3f4fb}.muted{fill:#a3a9c4}.on{fill:#1d1b2e}.faint{fill:#262a3b;stroke:#262a3b}.line{stroke:#2b2f42}.axis{stroke:#a3a9c4}.head{fill:#a3a9c4}.mint{fill:#74e8c8;stroke:#74e8c8}.coral{fill:#ff8fab;stroke:#ff8fab}.sky{fill:#7cc8ff;stroke:#7cc8ff}.lilac{fill:#b7a6ff;stroke:#b7a6ff}.sun{fill:#ffd479;stroke:#ffd479}.title{fill:#f3f4fb}</style>
 <rect class="bg" x="0" y="0" width="1280" height="640" stroke="none"/>
-<text class="title" x="80" y="190" font-size="104" font-weight="700">forecast-backtest</text>
-<text class="muted" x="80" y="268" font-size="46">score the baselines first, then your model.</text>
-<text class="muted" x="80" y="326" font-size="28">a claude skill that checks time-series models against simple baselines</text>
-<text class="muted" x="80" y="402" font-size="22">mean absolute error, store item demand, 90 days, lower is better</text>
-<line class="line" x1="420" y1="418" x2="420" y2="612" stroke-width="1.5"/>
-<text class="ink" x="400" y="452" text-anchor="end" font-size="26">last year's same days (364)</text><path class="mint" stroke-width="0" d="M420 428H732.7a16.0 16.0 0 0 1 16.0 16.0a16.0 16.0 0 0 1 -16.0 16.0H420Z"/><text class="title num" x="764.7" y="453" font-size="27" font-weight="700">8.88</text>
-<text class="ink" x="400" y="500" text-anchor="end" font-size="26">holt-winters, weekly</text><path class="coral" stroke-width="0" d="M420 476H772.5a16.0 16.0 0 0 1 16.0 16.0a16.0 16.0 0 0 1 -16.0 16.0H420Z"/><text class="title num" x="804.5" y="501" font-size="27" font-weight="700">9.96</text>
-<text class="ink" x="400" y="548" text-anchor="end" font-size="26">seasonal naive (7)</text><path class="sky" stroke-width="0" d="M420 524H837.4a16.0 16.0 0 0 1 16.0 16.0a16.0 16.0 0 0 1 -16.0 16.0H420Z"/><text class="title num" x="869.4" y="549" font-size="27" font-weight="700">11.71</text>
-<text class="ink" x="400" y="596" text-anchor="end" font-size="26">naive</text><path class="lilac" stroke-width="0" d="M420 572H895.7a16.0 16.0 0 0 1 16.0 16.0a16.0 16.0 0 0 1 -16.0 16.0H420Z"/><text class="title num" x="927.7" y="597" font-size="27" font-weight="700">13.29</text>
+<text class="title" x="80" y="186" font-size="104" font-weight="700">forecast-backtest</text>
+<text class="muted" x="80" y="260" font-size="46">score the baselines first, then your model.</text>
+<text class="muted" x="80" y="316" font-size="28">a claude skill that checks time-series models against simple baselines</text>
+<text class="muted" x="80" y="394" font-size="22">mean absolute error, store item demand, 90 days, lower is better</text>
+<line class="line" x1="420" y1="410" x2="420" y2="616" stroke-width="1.5"/>
+<text class="ink" x="400" y="445" text-anchor="end" font-size="24">yearly harmonic regression</text><path class="sun" stroke-width="0" d="M420 424H652.5a14.0 14.0 0 0 1 14.0 14.0a14.0 14.0 0 0 1 -14.0 14.0H420Z"/><text class="title num" x="680.5" y="446" font-size="25" font-weight="700">6.85</text>
+<text class="ink" x="400" y="485" text-anchor="end" font-size="24">last year's same days (364)</text><path class="mint" stroke-width="0" d="M420 464H725.8a14.0 14.0 0 0 1 14.0 14.0a14.0 14.0 0 0 1 -14.0 14.0H420Z"/><text class="title num" x="753.8" y="486" font-size="25" font-weight="700">8.88</text>
+<text class="ink" x="400" y="525" text-anchor="end" font-size="24">holt-winters, weekly</text><path class="coral" stroke-width="0" d="M420 504H764.5a14.0 14.0 0 0 1 14.0 14.0a14.0 14.0 0 0 1 -14.0 14.0H420Z"/><text class="title num" x="792.5" y="526" font-size="25" font-weight="700">9.96</text>
+<text class="ink" x="400" y="565" text-anchor="end" font-size="24">seasonal naive (7)</text><path class="sky" stroke-width="0" d="M420 544H827.7a14.0 14.0 0 0 1 14.0 14.0a14.0 14.0 0 0 1 -14.0 14.0H420Z"/><text class="title num" x="855.7" y="566" font-size="25" font-weight="700">11.71</text>
+<text class="ink" x="400" y="605" text-anchor="end" font-size="24">naive</text><path class="lilac" stroke-width="0" d="M420 584H884.4a14.0 14.0 0 0 1 14.0 14.0a14.0 14.0 0 0 1 -14.0 14.0H420Z"/><text class="title num" x="912.4" y="606" font-size="25" font-weight="700">13.29</text>
 </svg>

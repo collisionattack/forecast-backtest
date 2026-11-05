@@ -10,10 +10,10 @@ a claude skill that makes time-series forecasts prove themselves. claude scores 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/baseline-vs-model-dark.svg">
-  <img alt="mean absolute error on store item demand: last year's same days 8.88, weekly holt-winters 9.96, seasonal naive 11.71, naive 13.29" src="assets/baseline-vs-model-light.svg">
+  <img alt="mean absolute error on store item demand: yearly harmonic regression 6.85, last year's same days 8.88, weekly holt-winters 9.96, seasonal naive 11.71, naive 13.29" src="assets/baseline-vs-model-light.svg">
 </picture>
 
-on the store item demand data (500 daily series, 90-day horizon) a weekly holt-winters model beats the weekly seasonal naive baseline in 478 of 500 series. add last year's same days as a second baseline and it loses, with a mean absolute error of 9.96 against 8.88. the skill makes claude run both before it says a model works. the data is the [store item demand forecasting challenge](https://www.kaggle.com/c/demand-forecasting-kernels-only) on kaggle, which has its own rules and is not included here.
+on the store item demand data (500 daily series, 90-day horizon) a weekly holt-winters model beats the weekly seasonal naive baseline in 478 of 500 series. add last year's same days as a second baseline and it loses, with a mean absolute error of 9.96 against 8.88. the skill makes claude run both before it says a model works. a regression with a yearly term, `examples/yearly_harmonic.py`, reaches 6.85. the data is the [store item demand forecasting challenge](https://www.kaggle.com/c/demand-forecasting-kernels-only) on kaggle, which has its own rules and is not included here.
 
 ## install
 
@@ -23,7 +23,7 @@ clone it into your skills folder:
 git clone https://github.com/collisionattack/forecast-backtest ~/.claude/skills/forecast-backtest
 ```
 
-you need python 3.10 or newer, pandas 2.0 or newer and numpy. the ets example also needs statsmodels. ci runs the oldest and the newest of these on linux and windows.
+you need python 3.10 or newer, pandas 2.0 or newer and numpy. the ets examples also need statsmodels. ci runs the oldest and the newest of these on linux and windows.
 
 ## use
 
@@ -84,6 +84,31 @@ drift               13.279  1.584
 
 it beats last year's same days in all 500 series, and in the jan-mar window too (mae 5.82 against 7.52). this data looks like a smooth pattern plus poisson noise, which suits a fitted pattern: a rough poisson floor for the error is about 6.2, so little is left to gain here. demand with promotions or stock-outs is messier, and this result does not cover it.
 
+a third example is weekly retail data, [walmart store sales](https://www.kaggle.com/datasets/yasserh/walmart-dataset) (45 stores, 143 weeks from 2010 to 2012, cc0). the dates are day-first, the season is 52 weeks, and `examples/ets_weekly.py` is a damped holt-winters model:
+
+```bash
+python3 scripts/backtest.py Walmart.csv --date Date --date-format %d-%m-%Y --target Weekly_Sales --id Store \
+  --horizon 13 --season 52 --origins 3 --candidate examples/ets_weekly.py --level 80 95
+```
+
+```
+                       MAE   MASE
+candidate        42462.571  0.710
+seasonal_naive   58006.068  0.966
+naive           107891.470  1.781
+drift           116535.120  1.907
+
+candidate MASE 0.710 vs best baseline (seasonal_naive) 0.966: beats the baseline
+candidate beats the best baseline in 37 of 45 series
+
+prediction intervals of the candidate, over 45 series and 135 origins
+level  coverage  width (MASE units)
+   80     87.6%                3.00
+   95     96.3%                4.62
+```
+
+this holt-winters model has the yearly term (52 weeks) and beats the seasonal naive baseline in 37 of 45 stores. the weekly holt-winters on store item demand had no yearly term and lost to last year's same days.
+
 ## how it works
 
 <picture>
@@ -107,6 +132,7 @@ series with missing values, too little history or no variation in any window are
 | `scripts/backtest.py` | scores the baselines and your model | the numbers come from code, so claude reports measured errors |
 | `scripts/test_backtest.py` | checks for the scoring code, run with `python3 scripts/test_backtest.py` | a wrong backtest gives false confidence, so the metrics, the windows and the bad-input paths are tested in ci |
 | `examples/ets_monthly.py` | a model file with `forecast` and `forecast_interval` | shows the interface your own model file follows |
+| `examples/ets_weekly.py` | the same for weekly data with a 52-week season | the model behind the walmart example |
 | `examples/yearly_harmonic.py` | a model file for daily data with a weekly and a yearly pattern, numpy and pandas only | the yearly term is what beat last year's same days on store item demand, and the file is a starting point for your own daily model |
 | `assets/` | the images used here, each in a dark and a light version, and the social preview card | github shows the version that matches the reader's theme. the chart is drawn from the runs described above |
 
@@ -127,6 +153,6 @@ series with missing values, too little history or no variation in any window are
 ## limits
 
 - mase is undefined where a training window has no variation. that origin is left out, a series is skipped only when every origin is flat, and the run stops only when no series can be scored.
-- the numbers here come from air passengers and store item demand. they demonstrate the skill and say nothing about which model is best in general.
+- the numbers here come from three public datasets (air passengers, store item demand, walmart store sales). the ranking of models changes between them, so they demonstrate the skill and say nothing about which model is best in general.
 
 mit licensed, see [license](LICENSE).

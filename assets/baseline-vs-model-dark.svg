@@ -1,14 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="332" viewBox="0 0 760 332" role="img" aria-labelledby="t d" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="404" viewBox="0 0 760 404" role="img" aria-labelledby="t d" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
 <title id="t">forecast error on store item demand</title>
-<desc id="d">mean absolute error over 90 days for four models: last year's same days 8.88, holt-winters 9.96, seasonal naive 11.71, naive 13.29. lower is better.</desc>
-<style>.num{font-variant-numeric:tabular-nums}.bg{fill:#13151f;stroke:#2b2f42}.ink{fill:#f3f4fb}.muted{fill:#a3a9c4}.on{fill:#1d1b2e}.faint{fill:#262a3b;stroke:#262a3b}.line{stroke:#2b2f42}.axis{stroke:#a3a9c4}.head{fill:#a3a9c4}.mint{fill:#74e8c8;stroke:#74e8c8}.coral{fill:#ff8fab;stroke:#ff8fab}.sky{fill:#7cc8ff;stroke:#7cc8ff}.lilac{fill:#b7a6ff;stroke:#b7a6ff}</style>
-<rect class="bg" x="0.5" y="0.5" width="759" height="331" rx="14"/>
+<desc id="d">mean absolute error over 90 days for five models: yearly harmonic regression 6.85, last year's same days 8.88, holt-winters 9.96, seasonal naive 11.71, naive 13.29. lower is better.</desc>
+<style>.num{font-variant-numeric:tabular-nums}.bg{fill:#13151f;stroke:#2b2f42}.ink{fill:#f3f4fb}.muted{fill:#a3a9c4}.on{fill:#1d1b2e}.faint{fill:#262a3b;stroke:#262a3b}.line{stroke:#2b2f42}.axis{stroke:#a3a9c4}.head{fill:#a3a9c4}.mint{fill:#74e8c8;stroke:#74e8c8}.coral{fill:#ff8fab;stroke:#ff8fab}.sky{fill:#7cc8ff;stroke:#7cc8ff}.lilac{fill:#b7a6ff;stroke:#b7a6ff}.sun{fill:#ffd479;stroke:#ffd479}</style>
+<rect class="bg" x="0.5" y="0.5" width="759" height="403" rx="14"/>
 <text class="ink" x="30" y="44" font-size="20" font-weight="700">store item demand: forecast error over 90 days</text>
 <text class="muted" x="30" y="67" font-size="13.5">mean absolute error across 500 daily series and 3 origins, lower is better</text>
-<line class="line" x1="250" y1="86" x2="250" y2="282" stroke-width="1.5"/>
-<text class="ink" x="234" y="116" text-anchor="end" font-size="15">last year's same days (364)</text><path class="mint" stroke-width="1.5" d="M250 98H530.2a13.0 13.0 0 0 1 13.0 13.0a13.0 13.0 0 0 1 -13.0 13.0H250Z"/><text class="ink num" x="555.2" y="117" font-size="16" font-weight="700">8.88</text>
-<text class="ink" x="234" y="166" text-anchor="end" font-size="15">holt-winters, weekly</text><path class="coral" stroke-width="1.5" d="M250 148H565.6a13.0 13.0 0 0 1 13.0 13.0a13.0 13.0 0 0 1 -13.0 13.0H250Z"/><text class="ink num" x="590.6" y="167" font-size="16" font-weight="700">9.96</text>
-<text class="ink" x="234" y="216" text-anchor="end" font-size="15">seasonal naive (7)</text><path class="sky" stroke-width="1.5" d="M250 198H623.5a13.0 13.0 0 0 1 13.0 13.0a13.0 13.0 0 0 1 -13.0 13.0H250Z"/><text class="ink num" x="648.5" y="217" font-size="16" font-weight="700">11.71</text>
-<text class="ink" x="234" y="266" text-anchor="end" font-size="15">naive</text><path class="lilac" stroke-width="1.5" d="M250 248H675.6a13.0 13.0 0 0 1 13.0 13.0a13.0 13.0 0 0 1 -13.0 13.0H250Z"/><text class="ink num" x="700.6" y="267" font-size="16" font-weight="700">13.29</text>
-<text class="muted" x="30" y="310" font-size="13.5">weekly holt-winters beats seasonal naive (7) in 478 of 500 series. its mean error is higher than last year's same days.</text>
+<line class="line" x1="250" y1="86" x2="250" y2="332" stroke-width="1.5"/>
+<text class="ink" x="234" y="116" text-anchor="end" font-size="15">yearly harmonic regression</text><path class="sun" stroke-width="1.5" d="M250 98H462.9a13.0 13.0 0 0 1 13.0 13.0a13.0 13.0 0 0 1 -13.0 13.0H250Z"/><text class="ink num" x="487.9" y="117" font-size="16" font-weight="700">6.85</text>
+<text class="ink" x="234" y="166" text-anchor="end" font-size="15">last year's same days (364)</text><path class="mint" stroke-width="1.5" d="M250 148H530.2a13.0 13.0 0 0 1 13.0 13.0a13.0 13.0 0 0 1 -13.0 13.0H250Z"/><text class="ink num" x="555.2" y="167" font-size="16" font-weight="700">8.88</text>
+<text class="ink" x="234" y="216" text-anchor="end" font-size="15">holt-winters, weekly</text><path class="coral" stroke-width="1.5" d="M250 198H565.6a13.0 13.0 0 0 1 13.0 13.0a13.0 13.0 0 0 1 -13.0 13.0H250Z"/><text class="ink num" x="590.6" y="217" font-size="16" font-weight="700">9.96</text>
+<text class="ink" x="234" y="266" text-anchor="end" font-size="15">seasonal naive (7)</text><path class="sky" stroke-width="1.5" d="M250 248H623.5a13.0 13.0 0 0 1 13.0 13.0a13.0 13.0 0 0 1 -13.0 13.0H250Z"/><text class="ink num" x="648.5" y="267" font-size="16" font-weight="700">11.71</text>
+<text class="ink" x="234" y="316" text-anchor="end" font-size="15">naive</text><path class="lilac" stroke-width="1.5" d="M250 298H675.6a13.0 13.0 0 0 1 13.0 13.0a13.0 13.0 0 0 1 -13.0 13.0H250Z"/><text class="ink num" x="700.6" y="317" font-size="16" font-weight="700">13.29</text>
+<text class="muted" x="30" y="362" font-size="13.5">weekly holt-winters beats seasonal naive (7) in 478 of 500 series. its mean error is higher than last year's same days.</text>
+<text class="muted" x="30" y="382" font-size="13.5">a regression with day-of-week and yearly terms (examples/yearly_harmonic.py) has the lowest error.</text>
 </svg>

@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="760" height="262" viewBox="0 0 760 262" role="img" aria-labelledby="t d" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
 <title id="t">rolling-origin backtest</title>
 <desc id="d">three forecast origins. at each one the model trains on all earlier data and forecasts the next h steps, which are scored. later data is not used yet.</desc>
-<style>.num{font-variant-numeric:tabular-nums}.bg{fill:#fbf9ff;stroke:#e3ddf3}.ink{fill:#241f3a}.muted{fill:#6a6584}.on{fill:#1d1b2e}.faint{fill:#ece8f8;stroke:#d9d2ee}.line{stroke:#e3ddf3}.axis{stroke:#6a6584}.head{fill:#6a6584}.mint{fill:#8fe3cc;stroke:#2b9e84}.coral{fill:#ffa5b9;stroke:#dd4b6e}.sky{fill:#94d0ff;stroke:#3b8fd6}.lilac{fill:#c5b8ff;stroke:#7c64e6}</style>
+<style>.num{font-variant-numeric:tabular-nums}.bg{fill:#fbf9ff;stroke:#e3ddf3}.ink{fill:#241f3a}.muted{fill:#6a6584}.on{fill:#1d1b2e}.faint{fill:#ece8f8;stroke:#d9d2ee}.line{stroke:#e3ddf3}.axis{stroke:#6a6584}.head{fill:#6a6584}.mint{fill:#8fe3cc;stroke:#2b9e84}.coral{fill:#ffa5b9;stroke:#dd4b6e}.sky{fill:#94d0ff;stroke:#3b8fd6}.lilac{fill:#c5b8ff;stroke:#7c64e6}.sun{fill:#ffe29a;stroke:#b8860b}</style>
 <rect class="bg" x="0.5" y="0.5" width="759" height="261" rx="14"/>
 <text class="ink" x="30" y="44" font-size="20" font-weight="700">rolling-origin backtest</text>
 <text class="muted" x="30" y="67" font-size="13.5">every model forecasts h steps ahead from each origin and is scored on the same windows</text>
