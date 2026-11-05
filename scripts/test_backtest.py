@@ -311,6 +311,18 @@ def test_volume_weight_needs_id():
     assert "--weight volume needs --id" in err.getvalue(), err.getvalue()
 
 
+def test_yearly_example_beats_last_year_on_a_noisy_seasonal_series():
+    t = np.arange(1826)
+    noise = np.random.default_rng(11).normal(0, 3, 1826)
+    y = pd.Series(np.maximum(20 + 0.004 * t + 6 * np.sin(2 * np.pi * t / 7) + 8 * np.sin(2 * np.pi * t / 365.25) + noise, 0),
+                  index=pd.date_range("2013-01-01", periods=1826, freq="D"))
+    example = Path(__file__).resolve().parent.parent / "examples" / "yearly_harmonic.py"
+    models = {"last_year": lambda train, h, m: bt.seasonal_naive(train, h, 364), "candidate": bt.load_candidate(str(example))}
+    table, _, k = bt.backtest(y, models, 90, 7, 3, 90, longest=364)
+    # copying a noisy year doubles the noise variance, a fitted pattern does not
+    assert k == 3 and table.index[0] == "candidate" and np.isfinite(table["MAE"]).all(), table
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

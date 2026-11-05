@@ -66,6 +66,24 @@ level  coverage  width (MASE units)
 
 the 80% and 95% ranges held 95.8% and 99.0% of the test points, so on this series they are wider than they need to be. it is one small dataset and eight origins, so treat it as a smoke test.
 
+a second example is daily data with a yearly pattern, the store item demand data from the top of this page (500 series, horizon 90, `--season 7 364` so last year's same days is one of the baselines). `examples/yearly_harmonic.py` fits day-of-week dummies and yearly fourier terms on the log scale, and needs only numpy and pandas:
+
+```bash
+python3 scripts/backtest.py train.csv --date date --target sales --id store item \
+  --horizon 90 --season 7 364 --origins 3 --candidate examples/yearly_harmonic.py
+```
+
+```
+                       MAE   MASE
+candidate            6.846  0.833
+seasonal_naive_364   8.885  1.089
+seasonal_naive_7    11.713  1.404
+naive               13.290  1.584
+drift               13.279  1.584
+```
+
+it beats last year's same days in all 500 series, and in the jan-mar window too (mae 5.82 against 7.52). this data looks like a smooth pattern plus poisson noise, which suits a fitted pattern: a rough poisson floor for the error is about 6.2, so little is left to gain here. demand with promotions or stock-outs is messier, and this result does not cover it.
+
 ## how it works
 
 <picture>
@@ -89,6 +107,7 @@ series with missing values, no variation or too little history are skipped and c
 | `scripts/backtest.py` | scores the baselines and your model | the numbers come from code, so claude reports measured errors |
 | `scripts/test_backtest.py` | checks for the scoring code, run with `python3 scripts/test_backtest.py` | a wrong backtest gives false confidence, so the metrics, the windows and the bad-input paths are tested in ci |
 | `examples/ets_monthly.py` | a model file with `forecast` and `forecast_interval` | shows the interface your own model file follows |
+| `examples/yearly_harmonic.py` | a model file for daily data with a weekly and a yearly pattern, numpy and pandas only | the yearly term is what beat last year's same days on store item demand, and the file is a starting point for your own daily model |
 | `assets/` | the images used here, each in a dark and a light version, and the social preview card | github shows the version that matches the reader's theme. the chart is drawn from the runs described above |
 
 ## options
