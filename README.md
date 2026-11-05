@@ -34,7 +34,9 @@ To score your own model, pass a Python file that defines `forecast(train, h)`. `
 
 For prediction intervals, also define `forecast_interval(train, h, level)` in the same file, returning `(lower, upper)` with `h` values each, and add `--level 80 95`. The script prints the share of test points inside each interval and the mean width in MASE units. Coverage well below the level means the ranges are too narrow, well above means too wide.
 
-For data with many series, name the columns that identify one with `--id`, for example `--id store item`. The script scores each series on its own and averages MASE with equal weight per series. It also prints in how many series the candidate beats the best baseline. Series that are too short, have no variation or have missing target values are skipped and counted, never filled. `--max-series 50` scores only the first 50 series in id order, which keeps a slow model like ETS manageable.
+By default every origin trains on all earlier data. `--window 104` trains on the last 104 points instead, a rolling window. It has to be at least twice the longest season, and origins with fewer points than the window are not used.
+
+For data with many series, name the columns that identify one with `--id`, for example `--id store item`. The script scores each series on its own and averages MASE with equal weight per series, or with `--weight volume` weighted by each series' mean absolute target value, so large series count more. It also prints in how many series the candidate beats the best baseline. That count and the interval coverage stay unweighted. Series that are too short, have no variation or have missing target values are skipped and counted, never filled. `--max-series 50` scores only the first 50 series in id order, which keeps a slow model like ETS manageable.
 
 The metric is MASE, the average error divided by the in-sample error of a seasonal naive forecast. Lower is better, and the number compares across series. MAE comes along in the original units. `--season` takes several values, for example `--season 7 364` for daily data with a weekly and a yearly pattern. Each value adds a seasonal naive, all are scored on the same origins, and MASE is scaled by the first value. A longer season needs a longer history, so short series lose origins or are skipped. Run the tests with `python3 scripts/test_backtest.py`.
 
@@ -67,8 +69,7 @@ The 80% and 95% ranges held 95.8% and 99.0% of the test points, so on this serie
 
 ## Limits
 
-- Scores over many series weight every series equally. There is no volume weighting.
-- Expanding training window only.
+- The volume weight is a series' mean absolute target over its whole history, not over the scored windows.
 - A training window with no variation makes MASE undefined. That series is skipped and counted, and the run stops only when no series can be scored.
 
 MIT licensed, see [LICENSE](LICENSE).

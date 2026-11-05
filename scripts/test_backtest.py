@@ -267,6 +267,50 @@ def test_a_backwards_interval_is_refused():
     assert "no series could be scored" in msg and "lower <= upper" in msg, msg
 
 
+def test_rolling_window_gives_every_origin_the_same_number_of_points():
+    seen = []
+
+    def spy(train, h, m):
+        seen.append(len(train))
+        return np.repeat(train.iloc[-1], h)
+
+    y = make(np.arange(50.0) % 5 + 0.1 * np.arange(50))
+    _, _, k = bt.backtest(y, {"spy": spy}, 6, 1, 5, 6, window=30)
+    assert seen == [30] * k and k == 3  # cuts 44, 38, 32 fit a window of 30, cuts 26 and 20 do not
+    seen.clear()
+    _, _, k = bt.backtest(y, {"spy": spy}, 6, 1, 5, 6)
+    assert seen == [20, 26, 32, 38, 44] and k == 5  # expanding window by default
+
+
+def test_window_shorter_than_the_seasons_is_refused():
+    tmp = Path(tempfile.mkdtemp())
+    write_multi_csv(tmp / "m.csv")
+    with contextlib.redirect_stderr(io.StringIO()) as err:
+        assert raises(SystemExit, lambda: run_cli(tmp / "m.csv", "--window", "20"))  # season 12 needs 24
+    assert "--window must be at least 24" in err.getvalue(), err.getvalue()
+
+
+def test_volume_weight_follows_the_series_size():
+    # y = k * t: naive misses by k * (1..4), so its MAE is 2.5 * k. Mean target is 49.5 * k.
+    tmp = Path(tempfile.mkdtemp())
+    d = pd.date_range("2000-01-01", periods=100, freq="MS")
+    pd.concat([pd.DataFrame({"id": s, "date": d, "y": k * np.arange(100.0)}) for s, k in (("a", 1), ("b", 10))]).to_csv(tmp / "w.csv", index=False)
+    args = ("--horizon", "4", "--season", "1", "--origins", "3", "--id", "id")
+    equal, _ = run_cli(tmp / "w.csv", *args)
+    weighted, out = run_cli(tmp / "w.csv", *args, "--weight", "volume")
+    assert np.isclose(equal.loc["naive", "MAE"], 2.5 * (1 + 10) / 2)
+    assert np.isclose(weighted.loc["naive", "MAE"], 2.5 * (1 * 49.5 + 10 * 495) / (49.5 + 495))
+    assert "weighted by mean target value" in out
+
+
+def test_volume_weight_needs_id():
+    tmp = Path(tempfile.mkdtemp())
+    line_csv(tmp)
+    with contextlib.redirect_stderr(io.StringIO()) as err:
+        assert raises(SystemExit, lambda: run_cli(tmp / "line.csv", "--weight", "volume"))
+    assert "--weight volume needs --id" in err.getvalue(), err.getvalue()
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

@@ -3,13 +3,14 @@
 
   backtest.py data.csv --date DATE --target Y --horizon 12 [--season 12 [364 ...]] [--origins 5]
               [--step N] [--id COL [COL ...]] [--max-series N] [--date-format FMT]
-              [--candidate model.py [--level 80 95]] [--by-horizon]
+              [--window N] [--weight volume] [--candidate model.py [--level 80 95]] [--by-horizon]
 
 A candidate file defines forecast(train: pd.Series, h: int) -> array-like of h values, and for --level also
 forecast_interval(train, h, level) -> (lower, upper). With --id, every series is scored on its own and the
-scores are averaged.
+scores are averaged, with equal weight or with --weight volume.
 
-shortcut: expanding window, equal weight per series. Upgrade when you need a rolling window or volume-weighted scores.
+shortcut: the volume weight is the series' mean absolute target over its whole history, not over the scored windows.
+Upgrade when the weight should come from a business measure such as revenue.
 """
 import argparse
 import importlib.util
@@ -60,22 +61,23 @@ def load(path, date, target, ids=None, date_format=None):
     return out
 
 
-def backtest(y, models, h, m, origins, step, longest=None, intervals=None, levels=(), cover=None):
+def backtest(y, models, h, m, origins, step, longest=None, intervals=None, levels=(), cover=None, window=None):
     """models: {name: fn(train, h, m) -> h values}. Returns (summary, mase_by_horizon, n_origins).
     m is the season that scales MASE. longest (default m) is the longest season scored and sets the shortest training
-    window, so every model sees the same origins. With intervals(train, h, level) -> (lower, upper), cover[level] gets
-    one (share of test points inside, mean width / scale) pair per origin.
+    window, so every model sees the same origins. window trains on the last `window` points instead of everything
+    before the origin, and only origins with that many points are used. With intervals(train, h, level) -> (lower,
+    upper), cover[level] gets one (share of test points inside, mean width / scale) pair per origin.
     Raises ValueError when this series cannot be scored (missing values, too short, flat window, non-finite forecast)."""
     if y.isna().any():
         raise ValueError("target has missing values, decide how to handle them, they are never filled silently")
-    min_train = max(2 * (longest or m), 10)
+    min_train = max(2 * (longest or m), 10, window or 0)
     cuts = sorted(c for c in (len(y) - h - k * step for k in range(origins)) if c >= min_train)
     if not cuts:
         raise ValueError(f"series too short: {len(y)} points, need at least {min_train + h}")
     abs_err = {name: [] for name in models}
     scales = []
     for c in cuts:
-        train, test = y.iloc[:c], y.iloc[c:c + h].to_numpy()
+        train, test = y.iloc[c - window if window else 0:c], y.iloc[c:c + h].to_numpy()
         x = train.to_numpy()
         scale = np.abs(x[m:] - x[:-m]).mean()  # in-sample seasonal-naive MAE, the MASE denominator
         if scale == 0:
@@ -137,6 +139,11 @@ def main(argv=None):
                         "Each value adds a seasonal naive scored on the same origins. MASE is scaled by the first value")
     p.add_argument("--origins", type=int, default=5, help="number of rolling forecast origins")
     p.add_argument("--step", type=int, help="periods between origins (default: horizon)")
+    p.add_argument("--window", type=int,
+                   help="train on the last N points at every origin instead of all earlier data (rolling window), "
+                        "at least twice the longest season")
+    p.add_argument("--weight", choices=["equal", "volume"], default="equal",
+                   help="with --id, average series with equal weight or weighted by each series' mean absolute target value")
     p.add_argument("--id", nargs="+", help="column(s) that identify a series, scores are averaged over series")
     p.add_argument("--max-series", type=int, help="score only the first N series in id order, not a random sample")
     p.add_argument("--candidate", help="python file defining forecast(train, h)")
@@ -147,6 +154,10 @@ def main(argv=None):
     a = p.parse_args(argv)
     if min(*a.season, a.horizon, a.origins, a.max_series or 1, a.step or 1) < 1:
         p.error("--season, --horizon, --origins, --step and --max-series must be >= 1")
+    if a.window and a.window < max(2 * max(a.season), 10):
+        p.error(f"--window must be at least {max(2 * max(a.season), 10)}, twice the longest season")
+    if a.weight == "volume" and not a.id:
+        p.error("--weight volume needs --id")
     if a.level and not a.candidate:
         p.error("--level needs --candidate")
     if a.level and not all(0 < v < 100 for v in a.level):
@@ -169,26 +180,30 @@ def main(argv=None):
     series = load(a.csv, a.date, a.target, a.id, a.date_format)
     if a.max_series:
         series = dict(list(series.items())[:a.max_series])
-    results, skipped, covers = [], {}, []
+    results, skipped, covers, scored = [], {}, [], []
     for label, y in series.items():
         cov = {}
         try:
             results.append(backtest(y, models, a.horizon, a.season[0], a.origins, a.step or a.horizon,
-                                    max(a.season), intervals, a.level or (), cov))
+                                    max(a.season), intervals, a.level or (), cov, a.window))
             covers.append(cov)
+            scored.append(label)
         except ValueError as e:
             skipped[label] = str(e)
     if not results:
         label, why = next(iter(skipped.items()))
         sys.exit(f"no series could be scored, for example {label}: {why}")
     tables, by_hs, ks = zip(*results)
-    table = pd.concat(tables).groupby(level=0).mean().sort_values("MASE")
-    by_h = sum(by_hs) / len(by_hs)
+    w = np.array([series[s].abs().mean() for s in scored]) if a.weight == "volume" else np.ones(len(scored))
+    table = (sum(t.sort_index() * wi for t, wi in zip(tables, w)) / w.sum()).sort_values("MASE")
+    by_h = sum(b * wi for b, wi in zip(by_hs, w)) / w.sum()
 
     origins = str(min(ks)) if min(ks) == max(ks) else f"{min(ks)}-{max(ks)}"
-    print(f"origins: {origins}, horizon: {a.horizon}, season: {' '.join(map(str, a.season))}")
+    print(f"origins: {origins}, horizon: {a.horizon}, season: {' '.join(map(str, a.season))}"
+          + (f", window: {a.window}" if a.window else ""))
     if a.id:
-        print(f"series: {len(results)} scored, {len(skipped)} skipped, scores are averages over series")
+        print(f"series: {len(results)} scored, {len(skipped)} skipped, scores are averages over series"
+              + (" weighted by mean target value" if a.weight == "volume" else ""))
     print("\n" + table.round(3).to_string())
     for label, why in list(skipped.items())[:3]:
         print(f"skipped {label}: {why}")

@@ -53,6 +53,9 @@ python3 scripts/backtest.py data.csv --date date --target sales --horizon 28 --s
 # many stores or items: name the columns that identify one series
 python3 scripts/backtest.py data.csv --date date --target sales --id store item \
   --horizon 28 --season 7 --max-series 50 --candidate my_model.py
+# rolling window (last 730 points at every origin) and volume-weighted averages over series
+python3 scripts/backtest.py data.csv --date date --target sales --id store item \
+  --horizon 28 --season 7 --window 730 --weight volume
 ```
 
 Candidate file example (needs `statsmodels`):
@@ -68,10 +71,10 @@ def forecast(train, h):  # train is a pd.Series with a DatetimeIndex
 ## Limits
 
 - Many series: `--id` scores each series on its own, then averages MASE with equal weight
-  per series (no volume weighting) and counts the series where the candidate beats the best
+  per series (`--weight volume` weights by mean absolute target value instead) and counts the series where the candidate beats the best
   baseline. Series that are too short, flat or have missing values are skipped and counted in the output.
   `--max-series N` takes the first N series in id order, not a random sample.
-- Expanding training window only.
+- The expanding window is the default. `--window N` switches to a rolling window of N points.
 - A training window with no variation makes MASE undefined. That series is skipped and
   counted, and the run stops only when no series can be scored.
 - Needs Python 3 with pandas and numpy.
