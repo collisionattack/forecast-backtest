@@ -160,6 +160,57 @@ def test_step_must_be_at_least_one():
     assert "--step" in err.getvalue()
 
 
+def exit_message(fn):
+    try:
+        fn()
+    except SystemExit as e:
+        return str(e)
+    raise AssertionError("expected SystemExit")
+
+
+def test_series_with_a_missing_target_is_skipped_and_counted():
+    tmp = Path(tempfile.mkdtemp())
+    write_multi_csv(tmp / "m.csv")
+    df = pd.read_csv(tmp / "m.csv")
+    df.loc[df.index[df.id == "b"][5], "y"] = np.nan
+    df.to_csv(tmp / "m.csv", index=False)
+    _, out = run_cli(tmp / "m.csv", "--id", "id")
+    assert "series: 1 scored, 2 skipped" in out and "skipped b: target has missing values" in out, out
+
+
+def test_a_single_series_with_a_missing_target_stops_with_the_reason():
+    tmp = Path(tempfile.mkdtemp())
+    y = np.arange(60.0) % 12
+    y[30] = np.nan
+    pd.DataFrame({"date": pd.date_range("2000-01-01", periods=60, freq="MS"), "y": y}).to_csv(tmp / "n.csv", index=False)
+    msg = exit_message(lambda: run_cli(tmp / "n.csv"))
+    assert "no series could be scored" in msg and "missing values" in msg, msg
+
+
+def test_run_stops_when_every_series_is_flat():
+    tmp = Path(tempfile.mkdtemp())
+    pd.DataFrame({"date": pd.date_range("2000-01-01", periods=60, freq="MS"), "y": 1.0}).to_csv(tmp / "f.csv", index=False)
+    msg = exit_message(lambda: run_cli(tmp / "f.csv"))
+    assert "no series could be scored" in msg and "no variation" in msg, msg
+
+
+def test_gappy_dates_print_one_warning():
+    tmp = Path(tempfile.mkdtemp())
+    d = pd.date_range("2000-01-01", periods=40, freq="MS").delete(10)  # one month missing
+    pd.DataFrame({"date": d, "y": np.arange(39.0)}).to_csv(tmp / "g.csv", index=False)
+    with contextlib.redirect_stderr(io.StringIO()) as err:
+        bt.load(str(tmp / "g.csv"), "date", "y")
+    assert "1 of 1 series have irregular or gappy dates" in err.getvalue(), err.getvalue()
+
+
+def test_by_horizon_prints_one_row_per_step():
+    tmp = Path(tempfile.mkdtemp())
+    write_multi_csv(tmp / "m.csv")
+    _, out = run_cli(tmp / "m.csv", "--id", "id", "--by-horizon")
+    rows = [line.split()[0] for line in out.split("MASE by horizon step")[1].splitlines() if line.split()]
+    assert "1" in rows and "12" in rows, out
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

@@ -50,8 +50,6 @@ def load(path, date, target, ids=None, date_format=None):
         s = g.sort_values(date).set_index(date)[target]
         if s.index.duplicated().any():
             sys.exit(f"{label}: duplicate dates, pass --id with the columns that identify a series")
-        if s.isna().any():
-            sys.exit(f"{label}: target has missing values, decide how to handle them, they are never filled silently")
         s = s.astype(float)
         freq = pd.infer_freq(s.index) if len(s) >= 3 else None
         irregular += freq is None
@@ -64,7 +62,9 @@ def load(path, date, target, ids=None, date_format=None):
 
 def backtest(y, models, h, m, origins, step):
     """models: {name: fn(train, h, m) -> h values}. Returns (summary, mase_by_horizon, n_origins).
-    Raises ValueError when this series cannot be scored (too short, flat window, non-finite forecast)."""
+    Raises ValueError when this series cannot be scored (missing values, too short, flat window, non-finite forecast)."""
+    if y.isna().any():
+        raise ValueError("target has missing values, decide how to handle them, they are never filled silently")
     min_train = max(2 * m, 10)
     cuts = sorted(c for c in (len(y) - h - k * step for k in range(origins)) if c >= min_train)
     if not cuts:
