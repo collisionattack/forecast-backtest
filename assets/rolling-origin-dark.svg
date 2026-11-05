@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="244" viewBox="0 0 760 244" role="img" aria-labelledby="t d" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<title id="t">rolling-origin backtest</title>
+<desc id="d">three forecast origins. at each one the model trains on all earlier data and forecasts the next h steps, which are scored. later data is not used yet.</desc>
+<style>.num{font-variant-numeric:tabular-nums}.bg{fill:#0d1117;stroke:#30363d}.ink{fill:#e6edf3}.muted{fill:#8b949e}.accent{fill:#58a6ff}.strong{fill:#b1bac4}.mark{fill:#6e7681}.faint{fill:#30363d}.train{fill:#5c6570}.on-accent{fill:#0d1117}.on-train{fill:#e6edf3}.line{stroke:#30363d}.axis{stroke:#6e7681}.head{fill:#6e7681}</style>
+<rect class="bg" x="0.5" y="0.5" width="759" height="243" rx="8"/>
+<text class="ink" x="28" y="40" font-size="18" font-weight="600">rolling-origin backtest</text>
+<text class="muted" x="28" y="62" font-size="13">every model forecasts h steps ahead from each origin and is scored on the same windows</text>
+<text class="ink" x="116" y="105" text-anchor="end" font-size="14">origin 1</text><rect class="train" x="130" y="88" width="329.0" height="24"/><rect class="accent" x="460.0" y="88" width="89.0" height="24"/>
+<rect class="faint" x="550.0" y="88" width="180.0" height="24"/>
+<text class="on-train" x="142" y="104" font-size="13">train on earlier data</text><text class="on-accent" x="470.0" y="104" font-size="13">h steps</text><text class="ink" x="562.0" y="104" font-size="13">later data, unused</text>
+<text class="ink" x="116" y="149" text-anchor="end" font-size="14">origin 2</text><rect class="train" x="130" y="132" width="419.0" height="24"/><rect class="accent" x="550.0" y="132" width="89.0" height="24"/>
+<rect class="faint" x="640.0" y="132" width="90.0" height="24"/>
+<text class="ink" x="116" y="193" text-anchor="end" font-size="14">origin 3</text><rect class="train" x="130" y="176" width="509.0" height="24"/><rect class="accent" x="640.0" y="176" width="90.0" height="24"/>
+<line class="axis" x1="130" y1="220" x2="724" y2="220" stroke-width="1"/>
+<polygon class="head" points="730,220 723,216.5 723,223.5"/>
+<text class="muted" x="730" y="212" text-anchor="end" font-size="12">time</text>
+</svg>

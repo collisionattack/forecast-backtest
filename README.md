@@ -1,14 +1,17 @@
 # forecast-backtest
 
-[![tests](https://img.shields.io/github/actions/workflow/status/collisionattack/forecast-backtest/test.yml?branch=main&style=flat-square&label=tests)](https://github.com/collisionattack/forecast-backtest/actions/workflows/test.yml)
-[![license: mit](https://img.shields.io/badge/license-mit-0969da?style=flat-square)](LICENSE)
-![python 3.10 | 3.11 | 3.12 | 3.13](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-0969da?style=flat-square)
-![pandas 2.0+](https://img.shields.io/badge/pandas-2.0%2B-0969da?style=flat-square)
-![claude code skill](https://img.shields.io/badge/claude%20code-skill-0969da?style=flat-square)
+[![tests](https://github.com/collisionattack/forecast-backtest/actions/workflows/test.yml/badge.svg)](https://github.com/collisionattack/forecast-backtest/actions/workflows/test.yml)
+[![license: mit](https://img.shields.io/badge/license-mit-blue.svg)](LICENSE)
+![python 3.10 | 3.11 | 3.12 | 3.13](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)
+![pandas 2.0+](https://img.shields.io/badge/pandas-2.0%2B-blue)
+![claude code skill](https://img.shields.io/badge/claude%20code-skill-8a5cf5)
 
 a claude skill that makes time-series forecasts prove themselves. claude scores simple baselines first, so a model only counts once it beats them on a rolling-origin backtest.
 
-![mean absolute error on store item demand: last year's same days 8.88, weekly holt-winters 9.96, seasonal naive 11.71, naive 13.29](assets/baseline-vs-model.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/baseline-vs-model-dark.svg">
+  <img alt="mean absolute error on store item demand: last year's same days 8.88, weekly holt-winters 9.96, seasonal naive 11.71, naive 13.29" src="assets/baseline-vs-model-light.svg">
+</picture>
 
 on the store item demand data (500 daily series, 90-day horizon) a weekly holt-winters model beats the weekly seasonal naive baseline in 478 of 500 series. add last year's same days as a second baseline and it loses, with a mean absolute error of 9.96 against 8.88. the skill makes claude run both before it says a model works. the data is the [store item demand forecasting challenge](https://www.kaggle.com/c/demand-forecasting-kernels-only) on kaggle, which has its own rules and is not included here.
 
@@ -65,7 +68,10 @@ the 80% and 95% ranges held 95.8% and 99.0% of the test points, so on this serie
 
 ## how it works
 
-![three forecast origins. at each one the model trains on all earlier data and forecasts the next h steps, which are scored. later data is not used yet.](assets/rolling-origin.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/rolling-origin-dark.svg">
+  <img alt="three forecast origins. at each one the model trains on all earlier data and forecasts the next h steps, which are scored. later data is not used yet." src="assets/rolling-origin-light.svg">
+</picture>
 
 a single train/test split gives one error from one stretch of time. the script forecasts from several origins instead. at each origin the model trains only on earlier data, forecasts the next `h` steps and is scored on them, so a lucky window does not decide the result and nothing from the future leaks into training. every model is scored on the same windows.
 
@@ -83,7 +89,7 @@ series with missing values, no variation or too little history are skipped and c
 | `scripts/backtest.py` | scores the baselines and your model | the numbers come from code, so claude reports measured errors |
 | `scripts/test_backtest.py` | checks for the scoring code, run with `python3 scripts/test_backtest.py` | a wrong backtest gives false confidence, so the metrics, the windows and the bad-input paths are tested in ci |
 | `examples/ets_monthly.py` | a model file with `forecast` and `forecast_interval` | shows the interface your own model file follows |
-| `assets/` | the images used here and the social preview card | the chart and the diagram are drawn from the runs described above |
+| `assets/` | the images used here, each in a dark and a light version, and the social preview card | github shows the version that matches the reader's theme. the chart is drawn from the runs described above |
 
 ## options
 
