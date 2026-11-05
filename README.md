@@ -1,10 +1,10 @@
 # forecast-backtest
 
-[![tests](https://github.com/collisionattack/forecast-backtest/actions/workflows/test.yml/badge.svg)](https://github.com/collisionattack/forecast-backtest/actions/workflows/test.yml)
-[![license: mit](https://img.shields.io/badge/license-mit-blue.svg)](LICENSE)
-![python 3.10 | 3.11 | 3.12 | 3.13](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)
-![pandas 2.0+](https://img.shields.io/badge/pandas-2.0%2B-blue)
-![claude code skill](https://img.shields.io/badge/claude%20code-skill-8a5cf5)
+[![tests](https://img.shields.io/github/actions/workflow/status/collisionattack/forecast-backtest/test.yml?branch=main&style=flat-square&label=tests)](https://github.com/collisionattack/forecast-backtest/actions/workflows/test.yml)
+[![license: mit](https://img.shields.io/badge/license-mit-0969da?style=flat-square)](LICENSE)
+![python 3.10 | 3.11 | 3.12 | 3.13](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-0969da?style=flat-square)
+![pandas 2.0+](https://img.shields.io/badge/pandas-2.0%2B-0969da?style=flat-square)
+![claude code skill](https://img.shields.io/badge/claude%20code-skill-0969da?style=flat-square)
 
 a claude skill that makes time-series forecasts prove themselves. claude scores simple baselines first, so a model only counts once it beats them on a rolling-origin backtest.
 
