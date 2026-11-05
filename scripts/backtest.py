@@ -9,7 +9,7 @@ A candidate file defines forecast(train: pd.Series, h: int) -> array-like of h v
 forecast_interval(train, h, level) -> (lower, upper). With --id, every series is scored on its own and the
 scores are averaged, with equal weight or with --weight volume.
 
-shortcut: the volume weight is the series' mean absolute target over its whole history, not over the scored windows.
+shortcut: the volume weight is the series' mean absolute target in the scored windows, in the target's own units.
 Upgrade when the weight should come from a business measure such as revenue.
 """
 import argparse
@@ -61,13 +61,15 @@ def load(path, date, target, ids=None, date_format=None):
     return out
 
 
-def backtest(y, models, h, m, origins, step, longest=None, intervals=None, levels=(), cover=None, window=None):
+def backtest(y, models, h, m, origins, step, longest=None, intervals=None, levels=(), cover=None, window=None, volumes=None):
     """models: {name: fn(train, h, m) -> h values}. Returns (summary, mase_by_horizon, n_origins).
     m is the season that scales MASE. longest (default m) is the longest season scored and sets the shortest training
     window, so every model sees the same origins. window trains on the last `window` points instead of everything
     before the origin, and only origins with that many points are used. With intervals(train, h, level) -> (lower,
-    upper), cover[level] gets one (share of test points inside, mean width / scale) pair per origin.
-    Raises ValueError when this series cannot be scored (missing values, too short, flat window, non-finite forecast)."""
+    upper), cover[level] gets one (share of test points inside, mean width / scale) pair per origin. volumes gets the
+    mean absolute target of each scored test window. An origin whose training window has no variation is left out,
+    because MASE is undefined there. Raises ValueError when this series cannot be scored (missing values, too short,
+    every window flat, non-finite forecast)."""
     if y.isna().any():
         raise ValueError("target has missing values, decide how to handle them, they are never filled silently")
     min_train = max(2 * (longest or m), 10, window or 0)
@@ -80,9 +82,11 @@ def backtest(y, models, h, m, origins, step, longest=None, intervals=None, level
         train, test = y.iloc[c - window if window else 0:c], y.iloc[c:c + h].to_numpy()
         x = train.to_numpy()
         scale = np.abs(x[m:] - x[:-m]).mean()  # in-sample seasonal-naive MAE, the MASE denominator
-        if scale == 0:
-            raise ValueError(f"training window ending at row {c} has no variation, MASE is undefined")
+        if scale == 0:  # MASE is undefined for this origin, the others of the series still count
+            continue
         scales.append(scale)
+        if volumes is not None:
+            volumes.append(np.abs(test).mean())
         for name, fn in models.items():
             f = np.asarray(fn(train, h, m), dtype=float)
             if f.shape != (h,):
@@ -95,13 +99,15 @@ def backtest(y, models, h, m, origins, step, longest=None, intervals=None, level
             if lo.shape != (h,) or hi.shape != (h,) or not (np.isfinite(lo).all() and np.isfinite(hi).all()) or (lo > hi).any():
                 raise ValueError(f"interval at level {level} must be two arrays of {h} finite values with lower <= upper, row {c}")
             cover.setdefault(level, []).append((((lo <= test) & (test <= hi)).mean(), (hi - lo).mean() / scale))
+    if not scales:
+        raise ValueError("every training window has no variation, MASE is undefined")
     scales = np.array(scales)[:, None]
     abs_err = {name: np.array(v) for name, v in abs_err.items()}  # origins x h
     table = pd.DataFrame(
         {name: {"MAE": v.mean(), "MASE": (v / scales).mean()} for name, v in abs_err.items()}
     ).T.sort_values("MASE")
     by_h = pd.DataFrame({name: (v / scales).mean(axis=0) for name, v in abs_err.items()}, index=range(1, h + 1))
-    return table, by_h, len(cuts)
+    return table, by_h, len(scales)
 
 
 def beats(table, baselines):
@@ -143,7 +149,8 @@ def main(argv=None):
                    help="train on the last N points at every origin instead of all earlier data (rolling window), "
                         "at least twice the longest season")
     p.add_argument("--weight", choices=["equal", "volume"], default="equal",
-                   help="with --id, average series with equal weight or weighted by each series' mean absolute target value")
+                   help="with --id, average series with equal weight or weighted by each series' mean absolute target "
+                        "value in the scored windows")
     p.add_argument("--id", nargs="+", help="column(s) that identify a series, scores are averaged over series")
     p.add_argument("--max-series", type=int, help="score only the first N series in id order, not a random sample")
     p.add_argument("--candidate", help="python file defining forecast(train, h)")
@@ -180,21 +187,23 @@ def main(argv=None):
     series = load(a.csv, a.date, a.target, a.id, a.date_format)
     if a.max_series:
         series = dict(list(series.items())[:a.max_series])
-    results, skipped, covers, scored = [], {}, [], []
+    results, skipped, covers, volumes = [], {}, [], []
     for label, y in series.items():
-        cov = {}
+        cov, vol = {}, []
         try:
             results.append(backtest(y, models, a.horizon, a.season[0], a.origins, a.step or a.horizon,
-                                    max(a.season), intervals, a.level or (), cov, a.window))
+                                    max(a.season), intervals, a.level or (), cov, a.window, vol))
             covers.append(cov)
-            scored.append(label)
+            volumes.append(np.mean(vol))
         except ValueError as e:
             skipped[label] = str(e)
     if not results:
         label, why = next(iter(skipped.items()))
         sys.exit(f"no series could be scored, for example {label}: {why}")
     tables, by_hs, ks = zip(*results)
-    w = np.array([series[s].abs().mean() for s in scored]) if a.weight == "volume" else np.ones(len(scored))
+    w = np.array(volumes) if a.weight == "volume" else np.ones(len(results))
+    if w.sum() == 0:
+        sys.exit("every scored series has zero volume in the scored windows, there is nothing to weight by")
     table = (sum(t.sort_index() * wi for t, wi in zip(tables, w)) / w.sum()).sort_values("MASE")
     by_h = sum(b * wi for b, wi in zip(by_hs, w)) / w.sum()
 
@@ -203,7 +212,7 @@ def main(argv=None):
           + (f", window: {a.window}" if a.window else ""))
     if a.id:
         print(f"series: {len(results)} scored, {len(skipped)} skipped, scores are averages over series"
-              + (" weighted by mean target value" if a.weight == "volume" else ""))
+              + (" weighted by mean target value in the scored windows" if a.weight == "volume" else ""))
     print("\n" + table.round(3).to_string())
     for label, why in list(skipped.items())[:3]:
         print(f"skipped {label}: {why}")

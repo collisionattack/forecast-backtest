@@ -323,6 +323,33 @@ def test_yearly_example_beats_last_year_on_a_noisy_seasonal_series():
     assert k == 3 and table.index[0] == "candidate" and np.isfinite(table["MAE"]).all(), table
 
 
+def test_a_flat_origin_is_left_out_and_the_series_still_counts():
+    y = make(np.r_[np.zeros(60), np.arange(40.0) % 7 + 1])  # the windows ending at rows 46 and 58 are all zeros
+    table, _, k = bt.backtest(y, {"naive": bt.naive}, 6, 1, 5, 12)
+    assert k == 3 and np.isfinite(table["MAE"]).all()
+    assert raises(ValueError, lambda: bt.backtest(make(np.zeros(100)), {"naive": bt.naive}, 6, 1, 5, 12))  # nothing left to score
+
+
+def test_volume_weight_uses_the_scored_windows_not_the_whole_history():
+    tmp = Path(tempfile.mkdtemp())
+    d = pd.date_range("2000-01-01", periods=100, freq="MS")
+    small = 10 + np.arange(100.0) % 5
+    big = np.where(np.arange(100) >= 88, small * 10, small)  # same history, ten times the volume in the scored windows
+    pd.concat([pd.DataFrame({"id": s, "date": d, "y": v}) for s, v in (("a", small), ("b", big))]).to_csv(tmp / "v.csv", index=False)
+    weighted, _ = run_cli(tmp / "v.csv", "--horizon", "4", "--season", "1", "--origins", "3", "--id", "id", "--weight", "volume")
+    mae = [bt.backtest(make(v), {"naive": bt.naive}, 4, 1, 3, 4)[0].loc["naive", "MAE"] for v in (small, big)]
+    w = [np.mean([np.abs(v[c:c + 4]).mean() for c in (88, 92, 96)]) for v in (small, big)]
+    assert np.isclose(weighted.loc["naive", "MAE"], np.average(mae, weights=w))
+
+
+def test_volume_weight_stops_when_every_scored_window_is_zero():
+    tmp = Path(tempfile.mkdtemp())
+    y = np.where(np.arange(100) >= 80, 0.0, 10 + np.arange(100.0) % 5)  # varies in the past, zero in the scored windows
+    pd.DataFrame({"id": "a", "date": pd.date_range("2000-01-01", periods=100, freq="MS"), "y": y}).to_csv(tmp / "z.csv", index=False)
+    msg = exit_message(lambda: run_cli(tmp / "z.csv", "--horizon", "4", "--season", "1", "--origins", "3", "--id", "id", "--weight", "volume"))
+    assert "zero volume" in msg, msg
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

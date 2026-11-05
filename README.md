@@ -97,7 +97,7 @@ the baselines are naive (repeat the last value), seasonal naive (repeat the last
 
 two metrics come out. mae is in the units of your data, so a person can read it. mase divides the error by the in-sample error of a seasonal naive forecast, which lets you compare and average series of different size. mase is scaled by the first `--season`, so compare it only between runs that start with the same season.
 
-series with missing values, no variation or too little history are skipped and counted, never filled in. a filled-in value is a made-up result, and the output says how many series were scored and how many were skipped.
+series with missing values, too little history or no variation in any window are skipped and counted, never filled in. a single flat window only drops that origin. a filled-in value is a made-up result, and the output says how many series were scored and how many were skipped.
 
 ## what is in the repo
 
@@ -118,7 +118,7 @@ series with missing values, no variation or too little history are skipped and c
 | `--origins`, `--step` | how many forecast origins, and how many periods apart (default: the horizon) | more origins make it less likely that a gap between models is noise. the script warns when fewer than 5 fit |
 | `--window N` | trains on the last `N` points at every origin instead of all earlier data. needs at least twice the longest season | for data where old behavior stops mattering, and to give every origin the same amount of history |
 | `--id store item` | scores each series on its own, then averages | 500 products need 500 scores, and one average hides the bad ones. the output counts series scored and skipped, and the series where your model beats the best baseline |
-| `--weight volume` | averages series weighted by their mean absolute target value | equal weight lets a product that sells 3 units count as much as one that sells 3000 |
+| `--weight volume` | averages series weighted by their mean absolute target value in the scored windows | equal weight lets a product that sells 3 units count as much as one that sells 3000 |
 | `--max-series N` | scores only the first `N` series in id order | keeps a slow model quick to try. the first `N` are not a random sample, so report scores from a full run |
 | `--candidate`, `--by-horizon` | adds your model to the table, and prints the error at each step ahead | `--by-horizon` shows whether a model wins only at short range |
 | `--level 80 95` | share of test points inside each interval, and the mean width in mase units | a range helps only if actual values land inside it about as often as the level says. coverage far above the level means the ranges are too wide, far below means too narrow |
@@ -126,8 +126,7 @@ series with missing values, no variation or too little history are skipped and c
 
 ## limits
 
-- a training window with no variation makes mase undefined. that series is skipped and counted, and the run stops only when no series can be scored.
-- the volume weight is a series' mean absolute target over its whole history, not over the scored windows.
+- mase is undefined where a training window has no variation. that origin is left out, a series is skipped only when every origin is flat, and the run stops only when no series can be scored.
 - the numbers here come from air passengers and store item demand. they demonstrate the skill and say nothing about which model is best in general.
 
 mit licensed, see [license](LICENSE).
