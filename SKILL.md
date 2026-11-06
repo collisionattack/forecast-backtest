@@ -30,8 +30,9 @@ Report that comparison even when it is bad news. Do not jump to a fancy model fi
    the table names them after the files. Start simple (ETS/ARIMA, or a GBM on lag features)
    before anything heavier.
 5. **Read the verdict.** The script prints whether the candidate beats the best baseline.
-   If it does not, say so and recommend the baseline. If only a few origins fit, small
-   gaps are noise: raise `--origins` or shrink `--step`.
+   If it does not, say so and recommend the baseline. A gap under 1% prints "ties the
+   baseline" and is not a win. If only a few origins fit, bigger gaps can still be noise:
+   raise `--origins` or shrink `--step`.
 6. **Uncertainty.** If the user needs ranges, add `forecast_interval(train, h, level)` to the
    candidate file, returning `(lower, upper)`, and run with `--level 80 95`. The script prints
    the share of test points inside each interval and the mean width. Coverage far below the

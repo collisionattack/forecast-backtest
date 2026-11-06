@@ -135,9 +135,12 @@ def backtest(y, models, h, m, origins, step, longest=None, intervals=None, level
     return table, by_h, len(scales)
 
 
+TIE = 0.01  # shortcut: a fixed 1% of the best baseline's MASE, upgrade to a paired test over origins once they are independent
+
+
 def beats(table, baselines, name="candidate"):
-    """True when the candidate's MASE is strictly below every baseline's."""
-    return table.loc[name, "MASE"] < table.loc[baselines, "MASE"].min()
+    """True when the candidate's MASE is below every baseline's by more than TIE of the best baseline's."""
+    return table.loc[name, "MASE"] < table.loc[baselines, "MASE"].min() * (1 - TIE)
 
 
 def load_module(path):
@@ -270,7 +273,9 @@ def main(argv=None):
     for name in candidates:
         best = table.loc[baselines, "MASE"].idxmin()
         c, b = table.loc[name, "MASE"], table.loc[best, "MASE"]
-        verdict = "beats the baseline" if c < b else "does NOT beat the baseline, prefer the baseline"
+        verdict = ("beats the baseline" if beats(table, baselines, name)
+                   else f"ties the baseline within {TIE:.0%}, prefer the baseline" if c < b
+                   else "does NOT beat the baseline, prefer the baseline")
         print(f"\n{name} MASE {c:.3f} vs best baseline ({best}) {b:.3f}: {verdict}")
         if a.id:
             print(f"{name} beats the best baseline in {sum(beats(t, baselines, name) for t in tables)} "

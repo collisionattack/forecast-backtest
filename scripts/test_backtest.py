@@ -99,11 +99,32 @@ def test_day_first_dates_need_a_format_and_then_parse_correctly():
     assert (s.index[1] - s.index[0]).days == 7 and s.index.freq is not None
 
 
-def test_beats_needs_a_strictly_lower_mase():
+def test_beats_needs_a_gap_beyond_the_tie_margin():
     t = pd.DataFrame({"MAE": [1.0, 2.0, 2.0], "MASE": [0.5, 1.0, 1.0]}, index=["candidate", "naive", "drift"])
     assert bt.beats(t, ["naive", "drift"])
+    t.loc["candidate", "MASE"] = 1.0 - bt.TIE / 2  # lower than the baseline, but inside the margin
+    assert not bt.beats(t, ["naive", "drift"])
     t.loc["candidate", "MASE"] = 1.0
     assert not bt.beats(t, ["naive", "drift"])
+
+
+def test_verdict_line_separates_a_win_a_tie_and_a_loss():
+    tmp = Path(tempfile.mkdtemp())
+    line_csv(tmp)
+    (tmp / "m.py").write_text("def forecast(train, h):\n    return [0.0] * h\n")  # never scored, backtest is stubbed
+    real = bt.backtest
+    try:
+        verdicts = []
+        for candidate_mase in (0.5, 1.0 - bt.TIE / 2, 1.0):
+            t = pd.DataFrame({"MAE": [1.0] * 3, "MASE": [candidate_mase, 1.0, 1.2]}, index=["candidate", "naive", "drift"])
+            bt.backtest = lambda *a, t=t, **k: (t, pd.DataFrame(), 5)
+            _, out = run_cli(tmp / "line.csv", "--horizon", "4", "--season", "1", "--candidate", str(tmp / "m.py"))
+            verdicts.append(next(line for line in out.splitlines() if "vs best baseline" in line))
+    finally:
+        bt.backtest = real
+    assert verdicts[0].endswith(": beats the baseline"), verdicts
+    assert verdicts[1].endswith(": ties the baseline within 1%, prefer the baseline"), verdicts
+    assert verdicts[2].endswith(": does NOT beat the baseline, prefer the baseline"), verdicts
 
 
 def test_multi_series_averages_and_skips_short_series():
