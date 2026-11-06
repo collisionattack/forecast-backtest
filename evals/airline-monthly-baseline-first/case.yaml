@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: airline-monthly-baseline-first
+expected_outcome: |
+  A model for the next 12 months, scored against naive and seasonal naive (season 12) on several rolling forecast origins, with a final answer that says whether the model beats the best baseline and by how much.
+context:
+  scaffold_script: place-files.sh

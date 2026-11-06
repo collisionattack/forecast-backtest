@@ -150,6 +150,7 @@ series with missing values or too little history are skipped and counted, never 
 | `examples/ets_weekly.py` | the same for weekly data with a 52-week season | the model behind the walmart example |
 | `examples/prophet_daily.py` | a model file for daily data with prophet's trend and weekly and yearly seasonality, needs the prophet package and prints nothing from cmdstanpy | a second model family to run next to the harmonic regression with `--candidate`. it led on one window of store item demand and trailed on another |
 | `examples/yearly_harmonic.py` | a model file for daily data with a weekly and a yearly pattern, numpy and pandas only | the yearly term is what beat last year's same days on store item demand, and the file is a starting point for your own daily model |
+| `evals/` | four test cases for the skill: a prompt, input files and plain-sentence checks each | the scripts are tested in ci, this folder tests whether claude follows the steps. its readme says how to run them without leaking the checks to the run |
 | `assets/` | the images used here, each in a dark and a light version, and the social preview card | github shows the version that matches the reader's theme. the chart is drawn from the runs described above |
 
 ## options

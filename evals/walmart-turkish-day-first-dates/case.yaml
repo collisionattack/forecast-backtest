@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: walmart-turkish-day-first-dates
+expected_outcome: |
+  Dates read day-first (05-02-2010 is 5 February), weekly season 52, baselines and a candidate scored on a rolling-origin backtest, and a Turkish answer that says whether the model beats the best baseline.
+context:
+  scaffold_script: place-files.sh
