@@ -31,9 +31,12 @@ Report that comparison even when it is bad news. Do not jump to a fancy model fi
    before anything heavier.
 5. **Read the verdict.** The script prints whether the candidate beats the best baseline.
    If it does not, say so and recommend the baseline. A gap under 1% prints "ties the
-   baseline" and is not a win. If you call a gap noise, or the script reports a tie,
-   deliver the baseline's forecast, not the candidate's. If only a few origins fit,
-   bigger gaps can still be noise: raise `--origins` or shrink `--step`.
+   baseline" and is not a win. On one series with 10 or more origins whose windows do not
+   overlap (`--step` at least the horizon), a gap a paired test cannot tell from noise
+   prints "ties" too. If you call a gap noise, or the script reports a tie, deliver the
+   baseline's forecast, not the candidate's. If only a few origins fit, bigger gaps can
+   still be noise: raise `--origins`, or shrink `--step`, which adds origins but turns
+   the paired test off.
 6. **Uncertainty.** If the user needs ranges, add `forecast_interval(train, h, level)` to the
    candidate file, returning `(lower, upper)`, and run with `--level 80 95`. The script prints
    the share of test points inside each interval and the mean width. Coverage far below the

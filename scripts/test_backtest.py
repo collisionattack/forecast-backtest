@@ -127,6 +127,48 @@ def test_verdict_line_separates_a_win_a_tie_and_a_loss():
     assert verdicts[2].endswith(": does NOT beat the baseline, prefer the baseline"), verdicts
 
 
+def paired_table(per):
+    """A summary table that carries per-origin MASE, the table's MASE column is each model's mean."""
+    t = pd.DataFrame({"MAE": [1.0] * len(per), "MASE": [np.mean(v) for v in per.values()]}, index=list(per))
+    t.attrs["origin_mase"] = {k: np.asarray(v) for k, v in per.items()}
+    return t
+
+
+STEADY = np.ones(12) - 0.1 + np.tile([0.0, 0.01], 6)  # about 10% better than the baseline at every origin
+ERRATIC = np.ones(12) + np.tile([-0.5, 0.4], 6)  # 5% better on average, but worse at every second origin
+
+
+def test_paired_t_separates_a_steady_gap_from_an_erratic_one_and_needs_ten_origins():
+    per = {"steady": STEADY, "erratic": ERRATIC, "naive": np.ones(12), "drift": np.ones(12) * 1.2}
+    t = paired_table(per)
+    assert bt.paired_t(t, ["naive", "drift"], "steady") > bt.PAIRED_T
+    assert bt.paired_t(t, ["naive", "drift"], "erratic") <= bt.PAIRED_T
+    t.attrs["origin_mase"] = {k: v[:bt.PAIRED_ORIGINS - 1] for k, v in per.items()}
+    assert bt.paired_t(t, ["naive", "drift"], "steady") is None  # too few origins to test
+    t.attrs = {}
+    assert bt.paired_t(t, ["naive", "drift"], "steady") is None  # a table with no per-origin scores
+
+
+def test_verdict_calls_a_gap_noise_only_on_one_series_with_separate_windows():
+    tmp = Path(tempfile.mkdtemp())
+    line_csv(tmp)
+    (tmp / "m.py").write_text("def forecast(train, h):\n    return [0.0] * h\n")  # never scored, backtest is stubbed
+    real = bt.backtest
+    try:
+        verdicts = []
+        for candidate, extra in ((STEADY, ()), (ERRATIC, ()), (ERRATIC, ("--step", "2"))):  # --step 2 < horizon 4: windows overlap
+            t = paired_table({"candidate": candidate, "naive": np.ones(12), "drift": np.ones(12) * 1.2})
+            bt.backtest = lambda *a, t=t, **k: (t, pd.DataFrame(), 12)
+            _, out = run_cli(tmp / "line.csv", "--horizon", "4", "--season", "1", "--candidate", str(tmp / "m.py"), *extra)
+            verdicts.append(next(line for line in out.splitlines() if "vs best baseline" in line))
+    finally:
+        bt.backtest = real
+    assert verdicts[0].endswith(": beats the baseline"), verdicts
+    assert re.search(r": ties the baseline, the gap is within noise \(paired t [\d.]+ over 12 origins\), prefer the baseline$",
+                     verdicts[1]), verdicts
+    assert verdicts[2].endswith(": beats the baseline"), verdicts  # overlapping windows are not independent, no test
+
+
 def test_multi_series_averages_and_skips_short_series():
     tmp = Path(tempfile.mkdtemp())
     write_multi_csv(tmp / "m.csv")

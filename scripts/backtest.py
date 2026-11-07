@@ -72,7 +72,8 @@ class FlatSeries(ValueError):
 
 
 def backtest(y, models, h, m, origins, step, longest=None, intervals=None, levels=(), cover=None, window=None, volumes=None):
-    """models: {name: fn(train, h, m) -> h values}. Returns (summary, mase_by_horizon, n_origins).
+    """models: {name: fn(train, h, m) -> h values}. Returns (summary, mase_by_horizon, n_origins). The summary's
+    attrs["origin_mase"] holds each model's MASE at every origin, for the paired test.
     m is the season that scales MASE. longest (default m) is the longest season scored and sets the shortest training
     window, so every model sees the same origins. window trains on the last `window` points instead of everything
     before the origin, and only origins with that many points are used. With intervals {name: fn(train, h, level) ->
@@ -131,6 +132,7 @@ def backtest(y, models, h, m, origins, step, longest=None, intervals=None, level
     table = pd.DataFrame(
         {name: {"MAE": v.mean(), "MASE": (v / scales).mean()} for name, v in abs_err.items()}
     ).T.sort_values("MASE")
+    table.attrs["origin_mase"] = {name: (v / scales).mean(axis=1) for name, v in abs_err.items()}
     by_h = pd.DataFrame({name: (v / scales).mean(axis=0) for name, v in abs_err.items()}, index=range(1, h + 1))
     return table, by_h, len(scales)
 
@@ -141,6 +143,20 @@ TIE = 0.01  # shortcut: a fixed 1% of the best baseline's MASE, upgrade to a pai
 def beats(table, baselines, name="candidate"):
     """True when the candidate's MASE is below every baseline's by more than TIE of the best baseline's."""
     return table.loc[name, "MASE"] < table.loc[baselines, "MASE"].min() * (1 - TIE)
+
+
+PAIRED_T, PAIRED_ORIGINS = 2.0, 10  # shortcut: t > 2 is the normal cutoff, loose below ~30 origins, and under 10 origins the 1% margin alone decides; use scipy.stats.t if this test gets more weight
+
+
+def paired_t(table, baselines, name="candidate"):
+    """t statistic of the per-origin MASE gap (best baseline minus the model), or None with too few origins to test.
+    It treats the origins as independent, which holds on one series when --step is at least the horizon."""
+    per = table.attrs.get("origin_mase")
+    if not per or len(per[name]) < PAIRED_ORIGINS:
+        return None
+    gap = per[table.loc[baselines, "MASE"].idxmin()] - per[name]
+    sd = gap.std(ddof=1)
+    return gap.mean() / (sd / np.sqrt(len(gap))) if sd > 0 else (np.inf if gap.mean() > 0 else 0.0)
 
 
 def load_module(path):
@@ -273,7 +289,13 @@ def main(argv=None):
     for name in candidates:
         best = table.loc[baselines, "MASE"].idxmin()
         c, b = table.loc[name, "MASE"], table.loc[best, "MASE"]
-        verdict = ("beats the baseline" if beats(table, baselines, name)
+        win = beats(table, baselines, name)
+        # one series with non-overlapping windows only: many series share dates, overlapping windows share errors
+        t = None if a.id or (a.step and a.step < a.horizon) else paired_t(tables[0], baselines, name)
+        noisy = win and t is not None and t <= PAIRED_T
+        verdict = ("beats the baseline" if win and not noisy
+                   else f"ties the baseline, the gap is within noise (paired t {t:.1f} over {ks[0]} origins), "
+                        "prefer the baseline" if noisy
                    else f"ties the baseline within {TIE:.0%}, prefer the baseline" if c < b
                    else "does NOT beat the baseline, prefer the baseline")
         print(f"\n{name} MASE {c:.3f} vs best baseline ({best}) {b:.3f}: {verdict}")

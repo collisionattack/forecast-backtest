@@ -133,7 +133,7 @@ i also ran prophet (`examples/prophet_daily.py` is the daily version), an arima 
 
 a single train/test split gives one error from one stretch of time. the script forecasts from several origins instead. at each origin the model trains only on earlier data, forecasts the next `h` steps and is scored on them, so a lucky window does not decide the result and nothing from the future leaks into training. every model is scored on the same windows.
 
-the baselines are naive (repeat the last value), seasonal naive (repeat the last season) and drift (extend the line from the first point to the last). they run in seconds, and a model that cannot beat them is not worth the extra complexity. when your model does not beat the best baseline, the output says so and recommends the baseline.
+the baselines are naive (repeat the last value), seasonal naive (repeat the last season) and drift (extend the line from the first point to the last). they run in seconds, and a model that cannot beat them is not worth the extra complexity. when your model does not beat the best baseline, the output says so and recommends the baseline. a gap under 1% of the best baseline's mase prints as a tie, not a win. on one series with at least 10 origins that do not overlap (`--step` at least the horizon), a gap that a paired test over the origins cannot tell from noise prints as a tie too. with `--id` only the 1% rule applies: series share dates, and a few origins per series are too few to test.
 
 two metrics come out. mae is in the units of your data, so a person can read it. mase divides the error by the in-sample error of a seasonal naive forecast over everything before the origin, which lets you compare and average series of different size, and compare runs with different `--window` values. mase is scaled by the first `--season`, so compare it only between runs that start with the same season.
 
@@ -158,7 +158,7 @@ series with missing values or too little history are skipped and counted, never 
 | option | what it does | why it is there |
 | --- | --- | --- |
 | `--season 7 364` | each value adds a seasonal naive, all scored on the same origins. mase is scaled by the first value | one season is easy to beat. on daily sales last year's same days (364) beat weekly holt-winters, which the weekly baseline alone hid |
-| `--origins`, `--step` | how many forecast origins, and how many periods apart (default: the horizon) | more origins make it less likely that a gap between models is noise. the script warns when fewer than 5 fit |
+| `--origins`, `--step` | how many forecast origins, and how many periods apart (default: the horizon) | more origins make it less likely that a gap between models is noise. the script warns when fewer than 5 fit, and tests the gap on one series from 10 up. a `--step` below the horizon adds origins but turns that test off |
 | `--window N` | trains on the last `N` points at every origin instead of all earlier data. needs at least twice the longest season | for data where old behavior stops mattering, and to give every origin the same amount of history |
 | `--id store item` | scores each series on its own, then averages | 500 products need 500 scores, and one average hides the bad ones. the output counts series scored and skipped, and the series where your model beats the best baseline |
 | `--weight volume` | averages series weighted by their mean absolute target value in the scored windows | equal weight lets a product that sells 3 units count as much as one that sells 3000 |
