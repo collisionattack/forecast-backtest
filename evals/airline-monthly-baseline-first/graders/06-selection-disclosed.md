@@ -4,4 +4,4 @@ focus: trace
 weight: 1
 ---
 
-The final answer says how the final model was chosen: either that the reported error may be optimistic because several models were compared on the same backtest windows, or that the model was fixed before the backtest
+The final answer says whether the model was picked among several on the same backtest windows. If several were compared, it says the reported error may be optimistic. If only one model was backtested, it says so, for example that no other candidate was compared or that the model was tried once
