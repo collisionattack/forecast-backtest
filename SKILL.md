@@ -39,7 +39,9 @@ Report that comparison even when it is bad news. Do not jump to a fancy model fi
    level means the ranges are too narrow, far above means too wide.
 7. **Report.** Table of MAE and MASE per model, number of origins (and series scored versus
    skipped), MASE by horizon step (`--by-horizon`), and the caveats (gaps, short history,
-   structural breaks).
+   structural breaks). Also say what the backtest could not test: a stretch of the forecast
+   window that no backtest window covers (a holiday peak, for example), and a model picked
+   among several on the same windows, whose error is then optimistic.
 
 ## Usage
 
