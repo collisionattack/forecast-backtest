@@ -13,7 +13,7 @@ a claude skill that makes time-series forecasts prove themselves. claude scores 
   <img alt="mean absolute error on store item demand: yearly harmonic regression 6.85, last year's same days 8.88, weekly holt-winters 9.96, seasonal naive 11.71, naive 13.29" src="assets/baseline-vs-model-light.svg">
 </picture>
 
-on the store item demand data (500 daily series, 90-day horizon) a weekly holt-winters model beats the weekly seasonal naive baseline in 478 of 500 series. add last year's same days as a second baseline and it loses, with a mean absolute error of 9.96 against 8.88. the skill makes claude run both before it says a model works. a regression with a yearly term, `examples/yearly_harmonic.py`, reaches 6.85. the data is the [store item demand forecasting challenge](https://www.kaggle.com/c/demand-forecasting-kernels-only) on kaggle, which has its own rules and is not included here.
+on the store item demand data (500 daily series, 90-day horizon) a weekly holt-winters model with a damped trend (`examples/ets_daily.py`) beats the weekly seasonal naive baseline in 473 of 500 series, where a gap under 1% counts as a tie. add last year's same days as a second baseline and it loses, with a mean absolute error of 9.96 against 8.88. the skill makes claude run both before it says a model works. a regression with a yearly term, `examples/yearly_harmonic.py`, reaches 6.85. the data is the [store item demand forecasting challenge](https://www.kaggle.com/c/demand-forecasting-kernels-only) on kaggle, which has its own rules and is not included here.
 
 ## install
 
@@ -148,6 +148,7 @@ series with missing values or too little history are skipped and counted, never 
 | `scripts/test_backtest.py` | checks for the scoring code, run with `python3 scripts/test_backtest.py` | a wrong backtest gives false confidence, so the metrics, the windows and the bad-input paths are tested in ci |
 | `examples/ets_monthly.py` | a model file with `forecast` and `forecast_interval` | shows the interface your own model file follows |
 | `examples/ets_weekly.py` | the same for weekly data with a 52-week season | the model behind the walmart example |
+| `examples/ets_daily.py` | the same for daily data with a 7-day season and a damped trend | the model behind the weekly holt-winters numbers at the top |
 | `examples/prophet_daily.py` | a model file for daily data with prophet's trend and weekly and yearly seasonality, needs the prophet package and prints nothing from cmdstanpy | a second model family to run next to the harmonic regression with `--candidate`. it led on one window of store item demand and trailed on another |
 | `examples/yearly_harmonic.py` | a model file for daily data with a weekly and a yearly pattern, numpy and pandas only | the yearly term is what beat last year's same days on store item demand, and the file is a starting point for your own daily model |
 | `evals/` | four test cases for the skill: a prompt, input files and plain-sentence checks each | the scripts are tested in ci, this folder tests whether claude follows the steps. its readme says how to run them without leaking the checks to the run |
