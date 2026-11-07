@@ -259,6 +259,14 @@ def test_a_series_that_never_varies_gets_its_own_line_instead_of_a_score():
     assert re.search(r"^naive\s+0\.0$", out, re.M), out  # naive reproduces a constant exactly
 
 
+def test_a_series_that_repeats_its_season_exactly_is_listed_as_flat_too():
+    tmp = Path(tempfile.mkdtemp())
+    pd.DataFrame({"date": pd.date_range("2000-01-01", periods=60, freq="MS"), "y": np.arange(60.0) % 12}).to_csv(tmp / "p.csv", index=False)
+    table, out = run_cli(tmp / "p.csv")  # the seasonal naive error is zero, so MASE has no scale although the series moves
+    assert table is None and "flat series: 1" in out and "repeating its season exactly" in out, out
+    assert re.search(r"^seasonal_naive\s+0\.0+$", out, re.M), out  # 0.000 here, the other models' errors set the decimals
+
+
 def test_flat_series_are_counted_next_to_the_scored_ones():
     tmp = Path(tempfile.mkdtemp())
     d = pd.date_range("2000-01-01", periods=72, freq="MS")

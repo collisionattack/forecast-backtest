@@ -64,10 +64,10 @@ def load(path, date, target, ids=None, date_format=None):
 
 
 class FlatSeries(ValueError):
-    """Nothing varied before any origin, so MASE has no scale. mae holds each model's mean absolute error over the origins."""
+    """The seasonal naive error was zero before every origin, so MASE has no scale. mae holds each model's mean absolute error over the origins."""
 
     def __init__(self, mae):
-        super().__init__("no variation anywhere in the history, MASE has no scale")
+        super().__init__("the seasonal naive error is zero before every origin, MASE has no scale")
         self.mae = mae
 
 
@@ -80,7 +80,7 @@ def backtest(y, models, h, m, origins, step, longest=None, intervals=None, level
     (lower, upper)}, cover[(name, level)] gets one (share of test points inside, mean width / scale) pair per origin.
     volumes gets the
     mean absolute target of each scored test window. The MASE scale is the seasonal-naive error of everything before the
-    origin, so a flat rolling window still has one. An origin with no variation anywhere before it is left out. Raises
+    origin, so a flat rolling window still has one. An origin whose seasonal naive error is zero before it is left out. Raises
     FlatSeries, a ValueError that carries each model's MAE, when that holds for every origin. Raises ValueError when this
     series cannot be scored (missing values, too short, non-finite forecast)."""
     if y.isna().any():
@@ -109,7 +109,7 @@ def backtest(y, models, h, m, origins, step, longest=None, intervals=None, level
         train, test = split(c)
         past = y.iloc[:c].to_numpy()  # the scale reads everything before the origin, not only the window the models train on
         scale = np.abs(past[m:] - past[:-m]).mean()  # in-sample seasonal-naive MAE, the MASE denominator
-        if scale == 0:  # nothing varied before this origin, MASE has no scale here
+        if scale == 0:  # the seasonal naive error is zero before this origin, MASE has no scale here
             flat.append(c)
             continue
         scales.append(scale)
@@ -145,7 +145,7 @@ def beats(table, baselines, name="candidate"):
     return table.loc[name, "MASE"] < table.loc[baselines, "MASE"].min() * (1 - TIE)
 
 
-PAIRED_T, PAIRED_ORIGINS = 2.0, 10  # shortcut: t > 2 is the normal cutoff, loose below ~30 origins, and under 10 origins the 1% margin alone decides; use scipy.stats.t if this test gets more weight
+PAIRED_T, PAIRED_ORIGINS = 2.0, 10  # shortcut: a fixed t above 2 instead of the t distribution (the one-sided 5% line is 1.83 at 10 origins and 1.70 at 30), and under 10 origins the 1% margin alone decides; use scipy.stats.t if this test gets more weight
 
 
 def paired_t(table, baselines, name="candidate"):
@@ -256,8 +256,8 @@ def main(argv=None):
         if len(skipped) > 3:
             print(f"... and {len(skipped) - 3} more skipped")
         if flats:
-            print(f"\nflat series: {len(flats)} with no variation in their history, so MASE has no scale. "
-                  "mean absolute error per model:")
+            print(f"\nflat series: {len(flats)} with zero seasonal naive error before every origin (constant, or "
+                  "repeating its season exactly), so MASE has no scale. mean absolute error per model:")
             print(pd.DataFrame(flats).mean(axis=1).sort_values().round(3).to_string())
 
     if not results and not flats:

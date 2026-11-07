@@ -89,6 +89,6 @@ def forecast(train, h):  # train is a pd.Series with a DatetimeIndex
   random sample.
 - The expanding window is the default. `--window N` switches to a rolling window of N points.
 - MASE scales by the seasonal-naive error of everything before the origin, also with `--window`. An origin
-  with no variation before it is left out. A series that never varies gets no MASE and is listed on a line of
-  its own with each model's MAE.
+  where that error is zero is left out. A series where it is zero before every origin (a flat one, or one that
+  repeats its season exactly) gets no MASE and is listed on a line of its own with each model's MAE.
 - Needs Python 3 with pandas and numpy.
