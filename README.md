@@ -137,7 +137,7 @@ the baselines are naive (repeat the last value), seasonal naive (repeat the last
 
 two metrics come out. mae is in the units of your data, so a person can read it. mase divides the error by the in-sample error of a seasonal naive forecast over everything before the origin, which lets you compare and average series of different size, and compare runs with different `--window` values. mase is scaled by the first `--season`, so compare it only between runs that start with the same season.
 
-series with missing values or too little history are skipped and counted, never filled in. a filled-in value is a made-up result, and the output says how many series were scored and how many were skipped. a series that never varies cannot get a mase, so it is listed on a line of its own with each model's mae, and an origin with no variation before it is left out of its series.
+series with missing values or too little history are skipped and counted, never filled in. a filled-in value is a made-up result, and the output says how many series were scored and how many were skipped. a series whose seasonal naive error is zero before every origin (a flat one, or one that repeats its season exactly) cannot get a mase, so it is listed on a line of its own with each model's mae, and an origin with zero error before it is left out of its series.
 
 ## what is in the repo
 
@@ -170,7 +170,11 @@ series with missing values or too little history are skipped and counted, never 
 
 ## limits
 
-- a series that is flat for its whole history has no mase scale. it is not scored, and its mae per model is listed on a line of its own.
+- a series whose seasonal naive error is zero before every origin has no mase scale, because mase divides by that error. a flat series does, and so does one that repeats its season exactly. it is not scored, and its mae per model is listed on a line of its own.
+- dates with no regular frequency are read row by row, so `--season 7` means seven rows, not seven days. the script warns on stderr and goes on.
+- your model file sees only the target series. the script cannot check features it reads from elsewhere for leakage, that check is yours.
+- the verdict compares each candidate with the best baseline on its own. if you try several models or settings on the same windows and report the best, its error is optimistic.
+- the paired test passes a win at a fixed t above 2, whatever the number of origins, instead of reading the t distribution. with 10 origins the spread it divides by is itself estimated from 10 numbers, so read it as a screen against noise, not as a p-value.
 - the numbers here come from three public datasets (air passengers, store item demand, walmart store sales). the ranking of models changes between them, so they demonstrate the skill and say nothing about which model is best in general. the answer for your data comes from a run on your data with all your candidates in it.
 
 mit licensed, see [license](LICENSE).
